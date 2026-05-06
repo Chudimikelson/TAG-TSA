@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Tagora TSO",
+    "slug": "tagora-agent-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#166534"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tagora.agent",
+      "infoPlist": {
+        "NSCameraUsageDescription": "To capture receipt photos for collections.",
+        "NSLocationWhenInUseUsageDescription": "To record your location when logging a collection."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#166534"
+      },
+      "package": "com.tagora.agent",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        { "cameraPermission": "Allow Tagora TSO to access your camera." }
+      ],
+      [
+        "expo-location",
+        { "locationWhenInUsePermission": "Allow Tagora TSO to use your location." }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+name: Feature request
+description: Plan and implement a new product capability for Tagora Thrift Savings
+title: "feat: <short feature title>"
+labels:
+  - enhancement
+  - triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature summary
+      description: What should be built and why?
+      placeholder: Add a concise statement of the feature and user value.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Auth
+        - TSO app
+        - Back office
+        - Customer web
+        - Payments and webhooks
+        - Reconciliation
+        - Notifications
+        - Infrastructure and CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: List API endpoints, data model updates, and UX behavior.
+      placeholder: Include role rules, validations, and edge cases.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use measurable Given/When/Then style criteria.
+      placeholder: Include at least one metric or time-bound target.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: quality
+    attributes:
+      label: Delivery checklist
+      options:
+        - label: Added unit tests
+        - label: Added integration tests
+        - label: Added audit log coverage for sensitive actions
+        - label: Added docs updates
+        - label: Considered security and idempotency

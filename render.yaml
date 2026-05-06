@@ -1,0 +1,86 @@
+services:
+  - type: web
+    name: tagora-api
+    env: node
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace @tagora/shared && npm run build --workspace @tagora/api
+    startCommand: npm run start --workspace @tagora/api
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: PAYMENT_WEBHOOK_SECRET
+        sync: false
+
+  - type: web
+    name: tagora-web-admin
+    env: static
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace @tagora/shared && npm run build --workspace @tagora/web-admin
+    staticPublishPath: packages/web-admin/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: tagora-web-agent
+    env: static
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace @tagora/shared && npm run build --workspace @tagora/web-agent
+    staticPublishPath: packages/web-agent/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: tagora-web-customer
+    env: static
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace @tagora/shared && npm run build --workspace @tagora/web-customer
+    staticPublishPath: packages/web-customer/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,0 +1,56 @@
+name: Copilot codegen task
+description: Structured task for generating code and tests with Copilot
+title: "task: <api or feature name>"
+labels:
+  - copilot
+  - engineering
+body:
+  - type: dropdown
+    id: task_type
+    attributes:
+      label: Task type
+      options:
+        - API endpoint
+        - Data model
+        - Background job
+        - Frontend screen
+        - Integration adapter
+        - Test suite
+    validations:
+      required: true
+
+  - type: textarea
+    id: prompt_context
+    attributes:
+      label: Prompt context
+      description: Reference relevant section from docs/tagora-copilot-project-prompt.md.
+      placeholder: Paste the exact section that should drive code generation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_scope
+    attributes:
+      label: Implementation scope
+      description: Define files, interfaces, and constraints.
+      placeholder: Include validation rules, role checks, idempotency, and audit logging.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_scope
+    attributes:
+      label: Required tests
+      placeholder: Unit tests, integration tests, contract tests.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: done
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Code compiles and type-checks
+        - label: Tests added and passing
+        - label: Security and input validation covered
+        - label: Updated docs and env requirements if needed

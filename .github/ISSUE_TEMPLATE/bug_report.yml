@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a defect impacting Tagora Thrift Savings behavior
+title: "bug: <short bug title>"
+labels:
+  - bug
+  - triage
+body:
+  - type: textarea
+    id: impact
+    attributes:
+      label: Business impact
+      description: Who is affected and what workflow is blocked?
+      placeholder: Example: TSO cannot sync offline collections in low-connectivity areas.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Go to ...
+        2. Submit ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint or screen
+      placeholder: /collections or Agent Collect Screen
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Sev 1 - Critical outage
+        - Sev 2 - Major workflow impact
+        - Sev 3 - Minor issue
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: diagnostics
+    attributes:
+      label: Diagnostic checklist
+      options:
+        - label: Added logs or error payload
+        - label: Confirmed role and auth context
+        - label: Included sample request or response

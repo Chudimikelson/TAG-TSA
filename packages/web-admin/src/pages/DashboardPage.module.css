@@ -1,0 +1,34 @@
+.heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1f36;
+  margin: 0 0 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1a1f36;
+  text-decoration: none;
+  transition: box-shadow 0.15s, transform 0.1s;
+  text-align: center;
+  padding: 12px;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
