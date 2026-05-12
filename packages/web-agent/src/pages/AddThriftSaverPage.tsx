@@ -257,7 +257,7 @@ export function AddThriftSaverPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+        <div className="form-actions">
           <button
             className="btn btn-primary"
             type="submit"

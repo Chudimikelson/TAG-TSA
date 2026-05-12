@@ -1,3 +1,9 @@
+// User roles in the system
+export type UserRole = 'tso' | 'admin' | 'customer';
+
+// Admin-specific roles
+export type AdminRole = 'SuperAdmin' | 'CSM' | 'HOP' | 'TeamLead' | 'Fincon';
+
 // KYC status for members
 export type KycStatus = 'pending' | 'verified' | 'rejected';
 
@@ -123,9 +129,6 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   timestamp: Date;
 }
-
-// Role enum used across auth tokens and guards
-export type UserRole = 'tso' | 'admin' | 'customer';
 
 // Standardised API response envelope
 export interface ApiResponse<T = unknown> {

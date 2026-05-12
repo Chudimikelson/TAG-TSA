@@ -32,14 +32,14 @@ authRouter.post('/login', validate(loginSchema), handleLogin);
 // POST /auth/verify-otp
 authRouter.post('/verify-otp', validate(verifyOtpSchema), handleVerifyOtp);
 
-// POST /auth/admin/login  (back-office admins — email + password, no OTP)
+// POST /auth/admin/login  (back-office admins — email/phone + password, no OTP)
 authRouter.post(
   '/admin/login',
   validate(adminLoginSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password } = req.body as { email: string; password: string };
-      const result = await loginAdmin(email, password);
+      const { identifier, password } = req.body as { identifier: string; password: string };
+      const result = await loginAdmin(identifier, password);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

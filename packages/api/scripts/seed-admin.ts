@@ -43,9 +43,11 @@ async function seed() {
     name: ADMIN_NAME,
     email: ADMIN_EMAIL.toLowerCase(),
     passwordHash: hashPassword(ADMIN_PASSWORD),
+    role: 'SuperAdmin',
+    status: 'active',
   });
 
-  console.log(`Admin created: ${ADMIN_EMAIL} (adminId: ${adminId})`);
+  console.log(`Admin created: ${ADMIN_EMAIL} (adminId: ${adminId}, role: SuperAdmin)`);
   await mongoose.disconnect();
 }
 

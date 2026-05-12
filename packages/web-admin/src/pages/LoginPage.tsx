@@ -6,7 +6,7 @@ import styles from './LoginPage.module.css';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       markAuthenticated();
       navigate('/', { replace: true });
     } catch (err) {
@@ -32,13 +32,13 @@ export function LoginPage() {
         <h1 className={styles.title}>Tagora Admin</h1>
         {error && <p className={styles.error}>{error}</p>}
         <label className={styles.label}>
-          Email
+          Email or Phone
           <input
             className={styles.input}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@example.com"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="admin@example.com or +234..."
             required
           />
         </label>

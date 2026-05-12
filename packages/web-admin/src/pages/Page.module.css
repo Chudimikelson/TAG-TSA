@@ -64,6 +64,22 @@
   background: #a7f3d0;
 }
 
+.btnSmall {
+  padding: 4px 10px;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSmall:hover {
+  background: #d1d5db;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -128,4 +144,17 @@
   padding: 8px 12px;
   font-size: 0.85rem;
   margin: 0 0 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sectionSub {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
 }

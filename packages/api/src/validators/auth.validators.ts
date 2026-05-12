@@ -30,8 +30,16 @@ export const verifyOtpSchema = z.object({
   code: z.string().length(6).regex(/^\d{6}$/, 'OTP must be 6 digits'),
 });
 
+const phoneRegex = /^\+?[1-9]\d{7,14}$/;
+
 export const adminLoginSchema = z.object({
-  email: z.string().email().trim().toLowerCase(),
+  identifier: z
+    .string()
+    .trim()
+    .refine(
+      (value) => z.string().email().safeParse(value).success || phoneRegex.test(value),
+      'Identifier must be a valid email or phone number',
+    ),
   password: z.string().min(1),
 });
 

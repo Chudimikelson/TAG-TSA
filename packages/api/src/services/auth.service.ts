@@ -125,15 +125,39 @@ export async function verifyTsoOtp(input: VerifyOtpInput): Promise<{ message: st
 // ---------------------------------------------------------------------------
 
 export async function loginAdmin(
-  email: string,
+  identifier: string,
   password: string,
 ): Promise<{ token: string }> {
-  const admin = await AdminModel.findOne({ email: email.toLowerCase() });
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+  const isPhoneIdentifier = /^\+?[1-9]\d{7,14}$/.test(normalizedIdentifier);
+  const seededSuperAdminEmail = (process.env.ADMIN_EMAIL ?? 'osellezino@gmail.com').toLowerCase();
+
+  const admin = await AdminModel.findOne(
+    isPhoneIdentifier
+      ? { phone: normalizedIdentifier }
+      : { email: normalizedIdentifier },
+  );
 
   if (!admin || !verifyPassword(password, admin.passwordHash)) {
     throw new AppError(401, 'Invalid credentials');
   }
 
-  const token = signToken({ sub: admin.adminId, role: 'admin' });
+  if (admin.status === 'suspended') {
+    throw new AppError(403, 'Account suspended. Contact support.');
+  }
+
+  // Keep the seeded admin account as SuperAdmin for backward compatibility
+  // with old records created before role/status fields were added.
+  if (!isPhoneIdentifier && normalizedIdentifier === seededSuperAdminEmail && admin.role !== 'SuperAdmin') {
+    admin.role = 'SuperAdmin';
+    await admin.save();
+  }
+
+  const token = signToken({
+    sub: admin.adminId,
+    role: 'admin',
+    adminRole: admin.role,
+    name: admin.name,
+  });
   return { token };
 }

@@ -5,6 +5,8 @@ export interface JwtPayload {
   sub: string;        // actor id (tsoId, memberId, adminId)
   role: UserRole;
   deviceId?: string;
+  adminRole?: string; // specific admin role: SuperAdmin, CSM, HOP, TeamLead, Fincon
+  name?: string;
   iat?: number;
   exp?: number;
 }

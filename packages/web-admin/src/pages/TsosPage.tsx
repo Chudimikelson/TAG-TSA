@@ -1,158 +1,141 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge.js';
 import { Table } from '../components/Table.js';
-import { createTso, getTsos, TsoItem } from '../api/tsos.js';
+import { getTsos, TsoItem } from '../api/tsos.js';
+import { getCollections } from '../api/collections.js';
+import type { Collection } from '@tagora/shared';
 import styles from './Page.module.css';
 
+interface TsoPerformanceRow {
+  tsoId: string;
+  name: string;
+  phone: string;
+  status: 'active' | 'suspended';
+  todayCollections: number;
+  todayAmount: number;
+  monthCollections: number;
+  monthAmount: number;
+  uniqueMembers: number;
+}
+
+function isOnOrAfter(dateValue: Date | string, threshold: Date): boolean {
+  return new Date(dateValue).getTime() >= threshold.getTime();
+}
+
 export function TsosPage() {
-  const [rows, setRows] = useState<TsoItem[]>([]);
+  const [tsos, setTsos] = useState<TsoItem[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [deviceId, setDeviceId] = useState('web');
-  const [assignedAreas, setAssignedAreas] = useState('');
-  const [creating, setCreating] = useState(false);
-
-  async function loadTsos() {
+  async function loadReport() {
     setLoading(true);
     setError('');
     try {
-      const res = await getTsos();
-      setRows(res.data);
+      const [tsoRes, collectionRes] = await Promise.all([getTsos(), getCollections()]);
+      setTsos(tsoRes.data);
+      setCollections(collectionRes.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch TSOs');
+      setError(err instanceof Error ? err.message : 'Failed to fetch TSO performance data');
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadTsos();
+    loadReport();
   }, []);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setCreating(true);
+  const rows = useMemo<TsoPerformanceRow[]>(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    try {
-      const areas = assignedAreas
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      await createTso({ name, phone, password, deviceId, assignedAreas: areas });
-
-      setSuccess('TSO added successfully.');
-      setName('');
-      setPhone('');
-      setPassword('');
-      setDeviceId('web');
-      setAssignedAreas('');
-
-      await loadTsos();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add TSO');
-    } finally {
-      setCreating(false);
+    const byTso = new Map<string, Collection[]>();
+    for (const item of collections) {
+      const group = byTso.get(item.tsoId) ?? [];
+      group.push(item);
+      byTso.set(item.tsoId, group);
     }
-  }
+
+    return tsos
+      .map((tso) => {
+        const tsoCollections = byTso.get(tso.tsoId) ?? [];
+        const today = tsoCollections.filter((c) => isOnOrAfter(c.timestamp, startOfToday));
+        const month = tsoCollections.filter((c) => isOnOrAfter(c.timestamp, startOfMonth));
+
+        return {
+          tsoId: tso.tsoId,
+          name: tso.name,
+          phone: tso.phone,
+          status: tso.status,
+          todayCollections: today.length,
+          todayAmount: today.reduce((sum, c) => sum + Number(c.amount || 0), 0),
+          monthCollections: month.length,
+          monthAmount: month.reduce((sum, c) => sum + Number(c.amount || 0), 0),
+          uniqueMembers: new Set(month.map((c) => c.memberId)).size,
+        };
+      })
+      .sort((a, b) => b.monthAmount - a.monthAmount);
+  }, [collections, tsos]);
+
+  const totals = useMemo(() => {
+    return {
+      totalTsos: rows.length,
+      activeTsos: rows.filter((r) => r.status === 'active').length,
+      todayAmount: rows.reduce((sum, r) => sum + r.todayAmount, 0),
+      monthAmount: rows.reduce((sum, r) => sum + r.monthAmount, 0),
+    };
+  }, [rows]);
 
   return (
     <div>
-      <h1 className={styles.heading}>TSOs</h1>
+      <h1 className={styles.heading}>TSO Performance Report</h1>
 
       <div className={styles.card}>
-        <h2 style={{ fontSize: '1.05rem', marginBottom: 16 }}>Add TSO</h2>
+        <h2 style={{ fontSize: '1.05rem', marginBottom: 16 }}>Summary</h2>
 
         {error && <p className={styles.error}>{error}</p>}
-        {success && <p className={styles.success}>{success}</p>}
 
-        <form onSubmit={onSubmit}>
-          <div className={styles.formGrid}>
-            <label className={styles.label}>
-              Name
-              <input
-                className={styles.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </label>
-
-            <label className={styles.label}>
-              Phone
-              <input
-                className={styles.input}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+234..."
-                required
-              />
-            </label>
-
-            <label className={styles.label}>
-              Password
-              <input
-                className={styles.input}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
-                required
-              />
-            </label>
-
-            <label className={styles.label}>
-              Device ID
-              <input
-                className={styles.input}
-                value={deviceId}
-                onChange={(e) => setDeviceId(e.target.value)}
-                placeholder="web"
-                required
-              />
-            </label>
-
-            <label className={styles.label} style={{ gridColumn: '1 / -1' }}>
-              Assigned areas (comma-separated)
-              <input
-                className={styles.input}
-                value={assignedAreas}
-                onChange={(e) => setAssignedAreas(e.target.value)}
-                placeholder="Ikeja, Yaba, Surulere"
-              />
-            </label>
+        <div className={styles.formGrid}>
+          <div className={styles.label}>
+            <span>Total TSOs</span>
+            <strong>{totals.totalTsos}</strong>
           </div>
-
-          <button className={styles.btnPrimary} type="submit" disabled={creating}>
-            {creating ? 'Adding...' : 'Add TSO'}
-          </button>
-        </form>
+          <div className={styles.label}>
+            <span>Active TSOs</span>
+            <strong>{totals.activeTsos}</strong>
+          </div>
+          <div className={styles.label}>
+            <span>Collections Today</span>
+            <strong>NGN {totals.todayAmount.toLocaleString('en-NG')}</strong>
+          </div>
+          <div className={styles.label}>
+            <span>Collections This Month</span>
+            <strong>NGN {totals.monthAmount.toLocaleString('en-NG')}</strong>
+          </div>
+        </div>
       </div>
 
       <Table
         rows={rows}
         keyFn={(r) => r.tsoId}
-        emptyMessage={loading ? 'Loading TSOs...' : 'No TSOs yet.'}
+        emptyMessage={loading ? 'Loading report...' : 'No TSOs yet.'}
         columns={[
           { header: 'Name', render: (r) => r.name },
           { header: 'Phone', render: (r) => r.phone },
-          { header: 'Device', render: (r) => r.deviceId },
+          { header: 'Today Collections', render: (r) => r.todayCollections },
           {
-            header: 'Areas',
-            render: (r) => (r.assignedAreas.length ? r.assignedAreas.join(', ') : '—'),
+            header: 'Today Amount',
+            render: (r) => `NGN ${r.todayAmount.toLocaleString('en-NG')}`,
           },
+          { header: 'Month Collections', render: (r) => r.monthCollections },
+          {
+            header: 'Month Amount',
+            render: (r) => `NGN ${r.monthAmount.toLocaleString('en-NG')}`,
+          },
+          { header: 'Unique Savers (Month)', render: (r) => r.uniqueMembers },
           { header: 'Status', render: (r) => <Badge value={r.status} /> },
-          {
-            header: 'Created',
-            render: (r) => new Date(r.createdAt).toLocaleDateString('en-NG'),
-          },
         ]}
       />
     </div>
