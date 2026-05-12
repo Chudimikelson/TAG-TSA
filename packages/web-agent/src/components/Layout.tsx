@@ -5,17 +5,34 @@ import { useAuth } from '../context/AuthContext.js';
 interface LayoutProps {
   title: string;
   action?: ReactNode;
+  mobileAction?: ReactNode;
   children: ReactNode;
 }
 
-export function Layout({ title, action, children }: LayoutProps) {
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { to: '/', label: 'Collections', icon: '💵' },
+  { to: '/thrift-savers', label: 'Thrift Savers', icon: '👥' },
+  { to: '/daily-report', label: 'Daily Report', icon: '📊' },
+  { to: '/kyc-update', label: 'KYC Update', icon: '🪪' },
+  { to: '/withdrawals', label: 'Withdrawals', icon: '💳' },
+];
+
+export function Layout({ title, action, mobileAction, children }: LayoutProps) {
   const { tso, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [navOpen, setNavOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
     setNavOpen(false);
+    setUserMenuOpen(false);
   }, [location.pathname]);
 
   function handleLogout() {
@@ -24,7 +41,7 @@ export function Layout({ title, action, children }: LayoutProps) {
   }
 
   return (
-    <div className={`app-shell ${navOpen ? 'mobile-nav-open' : ''}`}>
+    <div className={`app-shell ${navOpen ? 'mobile-nav-open' : ''} ${userMenuOpen ? 'mobile-user-open' : ''}`}>
       <div className="mobile-topbar">
         <button
           type="button"
@@ -34,15 +51,42 @@ export function Layout({ title, action, children }: LayoutProps) {
           aria-expanded={navOpen}
           aria-controls="agent-sidebar-nav"
         >
-          Menu
+          <span aria-hidden>{navOpen ? '✕' : '☰'}</span>
         </button>
         <div className="mobile-topbar-title">{title}</div>
+
+        <div className="mobile-topbar-actions">
+          {mobileAction}
+
+          <div className="mobile-user-menu-wrap">
+            <button
+              type="button"
+              className="mobile-user-btn"
+              onClick={() => setUserMenuOpen((prev) => !prev)}
+              aria-label="Open user menu"
+            >
+              👤
+            </button>
+
+            {userMenuOpen && (
+              <div className="mobile-user-menu">
+                <div className="mobile-user-name">{tso?.name ?? 'Agent'}</div>
+                <button type="button" className="mobile-user-signout" onClick={handleLogout}>
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <button
         type="button"
         className="sidebar-backdrop"
-        onClick={() => setNavOpen(false)}
+        onClick={() => {
+          setNavOpen(false);
+          setUserMenuOpen(false);
+        }}
         aria-label="Close navigation menu"
       />
 
@@ -53,11 +97,16 @@ export function Layout({ title, action, children }: LayoutProps) {
         </div>
 
         <nav className="sidebar-nav" id="agent-sidebar-nav">
-          <NavLink to="/" end onClick={() => setNavOpen(false)}>Collections</NavLink>
-          <NavLink to="/thrift-savers" onClick={() => setNavOpen(false)}>Thrift Savers</NavLink>
-          <NavLink to="/daily-report" onClick={() => setNavOpen(false)}>Daily Report</NavLink>
-          <NavLink to="/kyc-update" onClick={() => setNavOpen(false)}>KYC Update</NavLink>
-          <NavLink to="/withdrawals" onClick={() => setNavOpen(false)}>Withdrawals</NavLink>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              onClick={() => setNavOpen(false)}
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="sidebar-footer">
@@ -70,6 +119,23 @@ export function Layout({ title, action, children }: LayoutProps) {
           </button>
         </div>
       </aside>
+
+      <div className="mobile-menu-panel" aria-hidden={!navOpen}>
+        <div className="mobile-menu-grid">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={`mobile-${item.to}`}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) => `mobile-menu-card ${isActive ? 'active' : ''}`}
+              onClick={() => setNavOpen(false)}
+            >
+              <span className="mobile-menu-icon" aria-hidden>{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </div>
 
       <div className="main-content">
         <div className="page-header">

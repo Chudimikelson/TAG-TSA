@@ -180,6 +180,12 @@ export function CollectionsHistoryPage() {
           Record Collection
         </button>
       )}
+      mobileAction={(
+        <button className="mobile-record-btn" onClick={handleOpenDialog}>
+          <span aria-hidden>+</span>
+          <span aria-hidden>💵</span>
+        </button>
+      )}
     >
       {submitSuccess && <div className="success-msg">{submitSuccess}</div>}
       {submitError && <div className="error-msg">{submitError}</div>}

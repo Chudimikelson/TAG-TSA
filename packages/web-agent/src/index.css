@@ -98,6 +98,13 @@ body { background: var(--bg); min-height: 100vh; }
   gap: 10px;
 }
 
+.mobile-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .mobile-menu-btn {
   border: 1px solid var(--border);
   background: var(--white);
@@ -106,6 +113,69 @@ body { background: var(--bg); min-height: 100vh; }
   font-size: 13px;
   font-weight: 700;
   padding: 7px 10px;
+}
+
+.mobile-record-btn {
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-user-menu-wrap {
+  position: relative;
+}
+
+.mobile-user-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.mobile-user-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 170px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  z-index: 50;
+}
+
+.mobile-user-name {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  padding: 2px 4px;
+}
+
+.mobile-user-signout {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: #111827;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.mobile-menu-panel {
+  display: none;
 }
 
 .mobile-topbar-title {
@@ -445,19 +515,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary-mid); }
   .mobile-topbar { display: flex; }
 
   .sidebar {
-    width: min(84vw, 300px);
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 40;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-  }
-
-  .app-shell.mobile-nav-open .sidebar {
-    transform: translateX(0);
+    display: none;
   }
 
   .sidebar-backdrop {
@@ -470,9 +528,62 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary-mid); }
     transition: opacity 0.2s ease;
   }
 
-  .app-shell.mobile-nav-open .sidebar-backdrop {
+  .app-shell.mobile-nav-open .sidebar-backdrop,
+  .app-shell.mobile-user-open .sidebar-backdrop {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .mobile-menu-panel {
+    display: block;
+    position: fixed;
+    top: 54px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    padding: 14px;
+    overflow-y: auto;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  .app-shell.mobile-nav-open .mobile-menu-panel {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  .mobile-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .mobile-menu-card {
+    border: 1px solid var(--border);
+    background: var(--white);
+    border-radius: 12px;
+    min-height: 84px;
+    text-decoration: none;
+    color: #111827;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+    font-weight: 600;
+  }
+
+  .mobile-menu-card.active {
+    border-color: var(--primary-mid);
+    background: #eefaf2;
+    color: var(--primary);
+  }
+
+  .mobile-menu-icon {
+    font-size: 18px;
   }
 
   .page-header {
