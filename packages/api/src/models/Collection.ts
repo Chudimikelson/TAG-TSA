@@ -35,7 +35,7 @@ const CollectionSchema = new Schema<CollectionDocument>(
     matchedTransactionId: { type: String },
     status: {
       type: String,
-      enum: ['pending', 'matched', 'flagged', 'reconciled'],
+      enum: ['pending', 'confirmed', 'rejected', 'matched', 'flagged', 'reconciled'],
       default: 'pending',
     },
     idempotencyKey: { type: String, required: true, unique: true, index: true },

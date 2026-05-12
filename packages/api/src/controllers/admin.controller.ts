@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   createTsoByAdmin,
-  flagCollection,
+  reviewCollection,
   listTsos,
   updateTso,
   updateTsoStatus,
@@ -21,13 +21,26 @@ import {
   UpdateTsoStatusBody,
 } from '../validators/admin.validators.js';
 
-export async function handleFlagCollection(
-  req: Request,
+export async function handleConfirmCollection(
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const collection = await flagCollection(req.params.id, req.actor!.sub);
+    const collection = await reviewCollection(req.params.id, 'confirmed', req.actor!.sub);
+    res.json({ success: true, data: collection });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleRejectCollection(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const collection = await reviewCollection(req.params.id, 'rejected', req.actor!.sub);
     res.json({ success: true, data: collection });
   } catch (err) {
     next(err);

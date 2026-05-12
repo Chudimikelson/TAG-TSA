@@ -226,14 +226,17 @@ export function KycUpdatePage() {
           {/* ── Customer search ── */}
           <div style={{ maxWidth: 720, marginBottom: 20 }}>
             <div className="field">
-              <label className="field-label" htmlFor="customer-search">Search customer</label>
-              <input
-                id="customer-search"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, phone or account number"
-              />
+              <div className="search-input-frame">
+                <label className="search-input-legend" htmlFor="customer-search">Search Customer</label>
+                <input
+                  className="modern-search-input"
+                  id="customer-search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by customer name"
+                />
+              </div>
             </div>
 
             {search.trim() && (

@@ -112,14 +112,17 @@ export function AssignmentsPage() {
 
       {!loading && !error && assignments.length > 0 && (
         <div className="field" style={{ marginBottom: 12 }}>
-          <label className="field-label" htmlFor="thrift-saver-search">Search customer</label>
-          <input
-            id="thrift-saver-search"
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, phone, account number, or member ID"
-          />
+          <div className="search-input-frame">
+            <label className="search-input-legend" htmlFor="thrift-saver-search">Search Customer</label>
+            <input
+              className="modern-search-input"
+              id="thrift-saver-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by customer name"
+            />
+          </div>
         </div>
       )}
 
@@ -132,7 +135,7 @@ export function AssignmentsPage() {
           key={member.memberId}
           className="card"
           onClick={() =>
-            navigate(`/record-collection/${member.memberId}`, {
+            navigate(`/thrift-savers/${member.memberId}`, {
               state: { member, activePlan },
             })
           }

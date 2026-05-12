@@ -59,7 +59,7 @@ export interface Tso {
 export type CollectionMethod = 'cash' | 'tsa' | 'tagora_pool';
 
 // Collection record status
-export type CollectionStatus = 'pending' | 'matched' | 'flagged' | 'reconciled';
+export type CollectionStatus = 'pending' | 'confirmed' | 'rejected' | 'matched' | 'flagged' | 'reconciled';
 
 // Individual savings collection by a TSO
 export interface Collection {

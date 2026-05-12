@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Collection } from '@tagora/shared';
-import { flagCollection, getCollections } from '../api/collections.js';
+import { confirmCollection, getCollections, rejectCollection } from '../api/collections.js';
 import { Badge } from '../components/Badge.js';
 import { Table } from '../components/Table.js';
 import styles from './Page.module.css';
@@ -25,9 +25,18 @@ export function CollectionsPage() {
 
   useEffect(() => { void load(); }, []);
 
-  async function handleFlag(id: string) {
+  async function handleConfirm(id: string) {
     try {
-      await flagCollection(id);
+      await confirmCollection(id);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error');
+    }
+  }
+
+  async function handleReject(id: string) {
+    try {
+      await rejectCollection(id);
       await load();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error');
@@ -60,13 +69,21 @@ export function CollectionsPage() {
             {
               header: 'Actions',
               render: (r) =>
-                r.status !== 'flagged' ? (
-                  <button
-                    className={styles.btnDanger}
-                    onClick={() => handleFlag(r.collectionId)}
-                  >
-                    Flag
-                  </button>
+                r.status === 'pending' ? (
+                  <span className={styles.row}>
+                    <button
+                      className={styles.btnSuccess}
+                      onClick={() => handleConfirm(r.collectionId)}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      className={styles.btnDanger}
+                      onClick={() => handleReject(r.collectionId)}
+                    >
+                      Reject
+                    </button>
+                  </span>
                 ) : (
                   '—'
                 ),

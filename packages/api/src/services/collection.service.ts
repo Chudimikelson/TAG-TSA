@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CollectionModel, CollectionDocument } from '../models/Collection.js';
-import { MemberModel } from '../models/Member.js';
 import { uploadReceiptImage } from './storage.service.js';
 import { audit } from './audit.service.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -67,11 +66,6 @@ export async function createCollection(
       method: input.method,
     },
   });
-
-  await MemberModel.updateOne(
-    { memberId: input.memberId },
-    { $inc: { savingsBalance: input.amount } },
-  );
 
   return collection;
 }

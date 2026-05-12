@@ -20,6 +20,12 @@ vi.mock('../models/Collection.js', () => ({
   },
 }));
 
+vi.mock('../models/Member.js', () => ({
+  MemberModel: {
+    updateOne: vi.fn(),
+  },
+}));
+
 vi.mock('../models/AuditLog.js', () => ({
   AuditLogModel: { create: vi.fn().mockResolvedValue({}) },
 }));
@@ -30,10 +36,11 @@ import {
   manuallyMatchTransaction,
   exportCollectionsCsv,
 } from '../services/reconciliation.service.js';
-import { flagCollection } from '../services/admin.service.js';
+import { reviewCollection } from '../services/admin.service.js';
 import { ReconciliationRecordModel } from '../models/ReconciliationRecord.js';
 import { TransactionModel } from '../models/Transaction.js';
 import { CollectionModel } from '../models/Collection.js';
+import { MemberModel } from '../models/Member.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 describe('reconciliation.service', () => {
@@ -169,28 +176,41 @@ describe('reconciliation.service', () => {
 describe('admin.service', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  describe('flagCollection', () => {
+  describe('reviewCollection', () => {
     it('throws 404 when collection not found', async () => {
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(null);
-      await expect(flagCollection('col-missing', 'admin-1')).rejects.toThrow(AppError);
+      await expect(reviewCollection('col-missing', 'confirmed', 'admin-1')).rejects.toThrow(AppError);
     });
 
-    it('throws 409 when collection is already flagged', async () => {
+    it('throws 409 when collection is not pending', async () => {
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce({
         collectionId: 'col-1',
-        status: 'flagged',
+        status: 'confirmed',
         save: vi.fn(),
       } as never);
-      await expect(flagCollection('col-1', 'admin-1')).rejects.toThrow(AppError);
+      await expect(reviewCollection('col-1', 'confirmed', 'admin-1')).rejects.toThrow(AppError);
     });
 
-    it('sets status to flagged and saves', async () => {
+    it('sets status to confirmed and increments member balance', async () => {
+      const save = vi.fn().mockResolvedValue({});
+      const col = { collectionId: 'col-1', status: 'pending', save };
+      vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(col as never);
+      vi.mocked(MemberModel.updateOne).mockResolvedValueOnce({ matchedCount: 1 } as never);
+
+      await reviewCollection('col-1', 'confirmed', 'admin-1');
+      expect(col.status).toBe('confirmed');
+      expect(MemberModel.updateOne).toHaveBeenCalledOnce();
+      expect(save).toHaveBeenCalledOnce();
+    });
+
+    it('sets status to rejected without incrementing balance', async () => {
       const save = vi.fn().mockResolvedValue({});
       const col = { collectionId: 'col-1', status: 'pending', save };
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(col as never);
 
-      await flagCollection('col-1', 'admin-1');
-      expect(col.status).toBe('flagged');
+      await reviewCollection('col-1', 'rejected', 'admin-1');
+      expect(col.status).toBe('rejected');
+      expect(MemberModel.updateOne).not.toHaveBeenCalled();
       expect(save).toHaveBeenCalledOnce();
     });
   });

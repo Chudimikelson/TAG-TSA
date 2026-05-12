@@ -2,6 +2,7 @@ import crypto, { randomUUID } from 'crypto';
 import { AppError } from '../middleware/errorHandler.js';
 import { AuditLogModel } from '../models/AuditLog.js';
 import { CollectionModel } from '../models/Collection.js';
+import { MemberModel } from '../models/Member.js';
 import { TsoModel } from '../models/Tso.js';
 import { AdminModel, AdminRole, AdminStatus } from '../models/Admin.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,21 +22,41 @@ function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
-export async function flagCollection(collectionId: string, adminId: string) {
+export type ReviewCollectionDecision = 'confirmed' | 'rejected';
+
+export async function reviewCollection(
+  collectionId: string,
+  decision: ReviewCollectionDecision,
+  adminId: string,
+) {
   const collection = await CollectionModel.findOne({ collectionId });
   if (!collection) throw new AppError(404, 'Collection not found');
 
-  if (collection.status === 'flagged') {
-    throw new AppError(409, 'Collection is already flagged');
+  if (collection.status !== 'pending') {
+    throw new AppError(409, 'Only pending collections can be reviewed');
   }
 
-  collection.status = 'flagged';
+  if (decision === 'confirmed') {
+    const memberUpdate = await MemberModel.updateOne(
+      { memberId: collection.memberId },
+      { $inc: { savingsBalance: collection.amount } },
+    );
+
+    if (!memberUpdate.matchedCount) {
+      throw new AppError(404, 'Member not found for this collection');
+    }
+
+    collection.status = 'confirmed';
+  } else {
+    collection.status = 'rejected';
+  }
+
   await collection.save();
 
   await AuditLogModel.create({
     logId: randomUUID(),
     actorId: adminId,
-    action: 'collection_flagged',
+    action: decision === 'confirmed' ? 'collection_confirmed' : 'collection_rejected',
     targetId: collectionId,
   });
 

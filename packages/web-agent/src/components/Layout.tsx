@@ -53,11 +53,10 @@ export function Layout({ title, action, children }: LayoutProps) {
         </div>
 
         <nav className="sidebar-nav" id="agent-sidebar-nav">
-          <NavLink to="/" end onClick={() => setNavOpen(false)}>Thrift Savers</NavLink>
+          <NavLink to="/" end onClick={() => setNavOpen(false)}>Collections</NavLink>
+          <NavLink to="/thrift-savers" onClick={() => setNavOpen(false)}>Thrift Savers</NavLink>
           <NavLink to="/daily-report" onClick={() => setNavOpen(false)}>Daily Report</NavLink>
           <NavLink to="/kyc-update" onClick={() => setNavOpen(false)}>KYC Update</NavLink>
-          <NavLink to="/thrift-savers/add" onClick={() => setNavOpen(false)}>+ Add Thrift Saver</NavLink>
-          <NavLink to="/collections" onClick={() => setNavOpen(false)}>Collections</NavLink>
           <NavLink to="/withdrawals" onClick={() => setNavOpen(false)}>Withdrawals</NavLink>
         </nav>
 

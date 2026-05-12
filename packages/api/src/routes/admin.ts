@@ -2,7 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
 	handleCreateTso,
-	handleFlagCollection,
+	handleConfirmCollection,
+	handleRejectCollection,
 	handleListTsos,
 	handleUpdateTso,
 	handleUpdateTsoStatus,
@@ -35,6 +36,13 @@ function requireSuperAdmin(req: Request, res: Response, next: NextFunction): voi
   next();
 }
 
+function requireCsm(req: Request, res: Response, next: NextFunction): void {
+	if (!req.actor || req.actor.adminRole !== 'CSM') {
+		return next(new AppError(403, 'This action requires CSM privileges'));
+	}
+	next();
+}
+
 adminRouter.use(requireAuth, requireRole('admin'));
 
 // GET /admin/tsos
@@ -49,8 +57,11 @@ adminRouter.patch('/tsos/:id/status', requireSuperAdmin, validate(updateTsoStatu
 // PATCH /admin/tsos/:id - Update TSO details
 adminRouter.patch('/tsos/:id', requireSuperAdmin, validate(updateTsoSchema), handleUpdateTso);
 
-// POST /admin/collections/:id/flag
-adminRouter.post('/collections/:id/flag', handleFlagCollection);
+// POST /admin/collections/:id/confirm
+adminRouter.post('/collections/:id/confirm', requireCsm, handleConfirmCollection);
+
+// POST /admin/collections/:id/reject
+adminRouter.post('/collections/:id/reject', requireCsm, handleRejectCollection);
 
 // Admin management endpoints (SuperAdmin only)
 // POST /admin/users - Create new admin

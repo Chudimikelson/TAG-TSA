@@ -42,6 +42,23 @@ export function DailyReportPage() {
     (w) => new Date(w.requestedAt).toDateString() === today,
   );
 
+  const withdrawalTotals = todayWithdrawals.reduce(
+    (acc, w) => {
+      acc.requested += w.amount;
+      if (w.status === 'approved' || w.status === 'disbursed') {
+        acc.effective += w.amount;
+      }
+      if (w.status === 'rejected') {
+        acc.rejected += w.amount;
+      }
+      if (w.status === 'pending') {
+        acc.pending += w.amount;
+      }
+      return acc;
+    },
+    { requested: 0, effective: 0, rejected: 0, pending: 0 },
+  );
+
   // Sum collections by method
   const collectionsByMethod = {
     cash: 0,
@@ -56,8 +73,7 @@ export function DailyReportPage() {
   });
 
   const totalCollections = Object.values(collectionsByMethod).reduce((a, b) => a + b, 0);
-  const totalWithdrawals = todayWithdrawals.reduce((sum, w) => sum + w.amount, 0);
-  const netAmount = totalCollections - totalWithdrawals;
+  const netAmount = totalCollections - withdrawalTotals.effective;
 
   return (
     <Layout title="Daily Report">
@@ -71,7 +87,7 @@ export function DailyReportPage() {
             <div className="row">
               <div>
                 <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
-                  TSO Agent
+                  TSO
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{tso?.name ?? 'Agent'}</div>
               </div>
@@ -152,10 +168,13 @@ export function DailyReportPage() {
             >
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Total Withdrawals</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#d32f2f' }}>
-                ₦{totalWithdrawals.toLocaleString()}
+                ₦{withdrawalTotals.effective.toLocaleString()}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {todayWithdrawals.length} request{todayWithdrawals.length !== 1 ? 's' : ''}
+                Deducted from approved/disbursed requests only
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                Total requested: ₦{withdrawalTotals.requested.toLocaleString()} • Pending: ₦{withdrawalTotals.pending.toLocaleString()} • Rejected: ₦{withdrawalTotals.rejected.toLocaleString()}
               </div>
             </div>
           </div>
@@ -174,7 +193,7 @@ export function DailyReportPage() {
               }}
             >
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
-                Net Amount (Collections - Withdrawals)
+                Net Amount (Collections - Effective Withdrawals)
               </div>
               <div
                 style={{

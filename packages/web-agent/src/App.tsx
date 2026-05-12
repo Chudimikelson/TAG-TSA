@@ -8,6 +8,7 @@ import { CollectionsHistoryPage } from './pages/CollectionsHistoryPage.js';
 import { WithdrawalsPage } from './pages/WithdrawalsPage.js';
 import { NewWithdrawalPage } from './pages/NewWithdrawalPage.js';
 import { AddThriftSaverPage } from './pages/AddThriftSaverPage.js';
+import { ThriftSaverDetailsPage } from './pages/ThriftSaverDetailsPage.js';
 import { DailyReportPage } from './pages/DailyReportPage.js';
 import { KycUpdatePage } from './pages/KycUpdatePage.js';
 
@@ -35,7 +36,8 @@ export function App() {
       />
 
       {/* Protected routes */}
-      <Route path="/" element={<RequireAuth><AssignmentsPage /></RequireAuth>} />
+      <Route path="/" element={<RequireAuth><CollectionsHistoryPage /></RequireAuth>} />
+      <Route path="/thrift-savers" element={<RequireAuth><AssignmentsPage /></RequireAuth>} />
       <Route
         path="/daily-report"
         element={<RequireAuth><DailyReportPage /></RequireAuth>}
@@ -43,6 +45,10 @@ export function App() {
       <Route
         path="/thrift-savers/add"
         element={<RequireAuth><AddThriftSaverPage /></RequireAuth>}
+      />
+      <Route
+        path="/thrift-savers/:memberId"
+        element={<RequireAuth><ThriftSaverDetailsPage /></RequireAuth>}
       />
       <Route
         path="/kyc-update"
