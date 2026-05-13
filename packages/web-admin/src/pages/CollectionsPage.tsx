@@ -110,7 +110,6 @@ export function CollectionsPage() {
   const [rows, setRows] = useState<EnrichedCollectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
   const [copiedRowId, setCopiedRowId] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
 
@@ -190,26 +189,6 @@ export function CollectionsPage() {
 
   const schedules = useMemo(() => buildSchedules(filteredRows), [filteredRows]);
 
-  const filteredSchedules = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return schedules;
-
-    return schedules.filter((schedule) => {
-      const scheduleDate = new Date(schedule.uploadedAtMs).toLocaleDateString('en-NG');
-      const haystack = [
-        schedule.scheduleId,
-        schedule.tsoName,
-        schedule.status,
-        scheduleDate,
-        schedule.collections.length,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(q);
-    });
-  }, [schedules, search]);
-
   const selectedSchedule = useMemo(
     () => schedules.find((schedule) => schedule.scheduleId === selectedScheduleId),
     [schedules, selectedScheduleId],
@@ -223,56 +202,37 @@ export function CollectionsPage() {
   }, [selectedSchedule, selectedScheduleId]);
 
   const summary = useMemo(() => {
-    const totalAmount = filteredSchedules.reduce((sum, schedule) => sum + Number(schedule.totalAmount), 0);
-    const pendingCount = filteredSchedules.filter((schedule) => schedule.status === 'pending').length;
-    const completedCount = filteredSchedules.filter((schedule) => schedule.status === 'completed').length;
+    const totalAmount = schedules.reduce((sum, schedule) => sum + Number(schedule.totalAmount), 0);
+    const pendingCount = schedules.filter((schedule) => schedule.status === 'pending').length;
+    const completedCount = schedules.filter((schedule) => schedule.status === 'completed').length;
 
     return {
-      totalCount: filteredSchedules.length,
+      totalCount: schedules.length,
       totalAmount,
       pendingCount,
       completedCount,
     };
-  }, [filteredSchedules]);
+  }, [schedules]);
 
-  function handleExportCsv() {
-    if (!filteredSchedules.length && !selectedSchedule) {
-      alert('No rows to export.');
-      return;
-    }
-
-    const csv = selectedSchedule
-      ? [
-        ['Account Number', 'Customer Name', 'TSO Name', 'Amount (NGN)', 'Method', 'Status', 'Date'].join(','),
-        ...selectedSchedule.collections.map((row) => [
-          escapeCsv(row.accountNumber),
-          escapeCsv(row.customerName),
-          escapeCsv(row.tsoName),
-          escapeCsv(row.amount),
-          escapeCsv(row.method),
-          escapeCsv(row.status),
-          escapeCsv(new Date(row.timestamp).toLocaleDateString('en-NG')),
-        ].join(',')),
-      ].join('\n')
-      : [
-        ['Schedule Ref', 'TSO Name', 'Items', 'Total Amount (NGN)', 'Status', 'Uploaded Date'].join(','),
-        ...filteredSchedules.map((schedule) => [
-          escapeCsv(schedule.scheduleId),
-          escapeCsv(schedule.tsoName),
-          escapeCsv(schedule.collections.length),
-          escapeCsv(schedule.totalAmount),
-          escapeCsv(schedule.status),
-          escapeCsv(new Date(schedule.uploadedAtMs).toLocaleDateString('en-NG')),
-        ].join(',')),
-      ].join('\n');
+  function handleExportScheduleCsv(schedule: CollectionSchedule) {
+    const csv = [
+      ['Account Number', 'Customer Name', 'TSO Name', 'Amount (NGN)', 'Method', 'Status', 'Date'].join(','),
+      ...schedule.collections.map((row) => [
+        escapeCsv(row.accountNumber),
+        escapeCsv(row.customerName),
+        escapeCsv(row.tsoName),
+        escapeCsv(row.amount),
+        escapeCsv(row.method),
+        escapeCsv(row.status),
+        escapeCsv(new Date(row.timestamp).toLocaleDateString('en-NG')),
+      ].join(',')),
+    ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = selectedSchedule
-      ? `collection-schedule-${selectedSchedule.scheduleId}.csv`
-      : `collection-schedules-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `collection-schedule-${schedule.scheduleId}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -285,24 +245,6 @@ export function CollectionsPage() {
       {error && <p className={styles.error}>{error}</p>}
 
       <div className={styles.card}>
-        <div className={styles.formGrid}>
-          <label className={styles.label}>
-            <span>Search Schedules</span>
-            <input
-              className={styles.input}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by TSO, status, schedule reference, or date"
-            />
-          </label>
-          <label className={styles.label}>
-            <span>&nbsp;</span>
-            <button className={styles.btnPrimary} type="button" onClick={handleExportCsv}>
-              Export CSV
-            </button>
-          </label>
-        </div>
-
         <div className={styles.formGrid}>
           <div className={styles.label}><span>Total Schedules</span><strong>{summary.totalCount}</strong></div>
           <div className={styles.label}><span>Total Amount</span><strong>₦{summary.totalAmount.toLocaleString()}</strong></div>
@@ -392,7 +334,7 @@ export function CollectionsPage() {
           </div>
         ) : (
           <Table
-            rows={filteredSchedules}
+            rows={schedules}
             keyFn={(r) => r.scheduleId}
             emptyMessage="No schedules found."
             columns={[
@@ -408,9 +350,14 @@ export function CollectionsPage() {
               {
                 header: 'Actions',
                 render: (r) => (
-                  <button className={styles.btnPrimary} type="button" onClick={() => setSelectedScheduleId(r.scheduleId)}>
-                    Open Schedule
-                  </button>
+                  <span className={styles.row}>
+                    <button className={styles.btnPrimary} type="button" onClick={() => setSelectedScheduleId(r.scheduleId)}>
+                      Open Schedule
+                    </button>
+                    <button className={styles.btnSmall} type="button" onClick={() => handleExportScheduleCsv(r)}>
+                      Export CSV
+                    </button>
+                  </span>
                 ),
               },
             ]}
