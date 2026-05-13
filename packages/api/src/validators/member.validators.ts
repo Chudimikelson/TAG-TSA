@@ -29,7 +29,7 @@ export const createMemberSchema = z.object({
   address: z.string().min(2).max(200).trim().optional(),
   branch: z.string().min(1).max(100).trim().optional(),
   accountNumber: z.string().min(1).max(50).trim().optional(),
-  nationalIdRef: z.string().min(1).max(100).trim(),
+  nationalIdRef: z.string().min(1).max(100).trim().optional(),
 });
 
 export const updateMemberSchema = z

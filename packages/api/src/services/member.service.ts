@@ -173,7 +173,7 @@ export async function updateMember(
   if (Object.prototype.hasOwnProperty.call(input, 'accountNumber') && input.accountNumber) {
     member.accountNumber = input.accountNumber;
   }
-  if (Object.prototype.hasOwnProperty.call(input, 'nationalIdRef') && input.nationalIdRef) {
+  if (Object.prototype.hasOwnProperty.call(input, 'nationalIdRef')) {
     member.nationalIdRef = input.nationalIdRef;
   }
 

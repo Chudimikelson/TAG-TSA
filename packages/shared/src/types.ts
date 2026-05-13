@@ -16,7 +16,7 @@ export interface Member {
   email?: string;
   address?: string;
   branch?: string;
-  nationalIdRef: string;
+  nationalIdRef?: string;
   kycStatus: KycStatus;
   savingsBalance?: number;
   tsoName?: string;

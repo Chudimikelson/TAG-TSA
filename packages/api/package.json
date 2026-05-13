@@ -14,7 +14,8 @@
     "clean": "rimraf dist *.tsbuildinfo",
     "typecheck": "tsc --noEmit",
     "seed:admin": "tsx scripts/seed-admin.ts",
-    "import:thrift-savers": "tsx scripts/import-thrift-savers.ts"
+    "import:thrift-savers": "tsx scripts/import-thrift-savers.ts",
+    "cleanup:legacy-national-id": "tsx scripts/cleanup-legacy-national-id.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1041.0",

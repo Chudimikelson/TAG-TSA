@@ -14,6 +14,7 @@ interface DraftCollection {
   accountNumber?: string;
   planId: string;
   amount: number;
+  method: 'cash' | 'tsa' | 'tagora_pool';
 }
 
 function statusBadge(status: string) {
@@ -37,6 +38,7 @@ export function CollectionsHistoryPage() {
   const [query, setQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<'cash' | 'tsa' | 'tagora_pool'>('cash');
   const [drafts, setDrafts] = useState<DraftCollection[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -87,6 +89,7 @@ export function CollectionsHistoryPage() {
     setQuery('');
     setSelectedMemberId('');
     setAmount('');
+    setMethod('cash');
   }
 
   function handleOpenDialog() {
@@ -130,6 +133,7 @@ export function CollectionsHistoryPage() {
         accountNumber: member.accountNumber,
         planId: activePlan.planId,
         amount: amt,
+        method,
       },
     ]);
     setAmount('');
@@ -156,7 +160,7 @@ export function CollectionsHistoryPage() {
           memberId: draft.memberId,
           planId: draft.planId,
           amount: draft.amount,
-          method: 'cash',
+          method: draft.method,
           idempotencyKey: `${draft.memberId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         });
       }
@@ -306,6 +310,26 @@ export function CollectionsHistoryPage() {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
               />
+            </div>
+
+            <div className="field">
+              <span className="section-label">Payment method</span>
+              <div className="toggle-group">
+                {([
+                  { value: 'cash' as const, label: 'Cash' },
+                  { value: 'tsa' as const, label: 'Transfer (TSA)' },
+                  { value: 'tagora_pool' as const, label: 'Transfer (Tagora-Pool)' },
+                ] as const).map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    className={`toggle-btn ${method === m.value ? 'active' : ''}`}
+                    onClick={() => setMethod(m.value)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="form-actions" style={{ marginTop: 8 }}>

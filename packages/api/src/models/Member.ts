@@ -10,7 +10,7 @@ export interface MemberDocument extends Document {
   address?: string;
   branch?: string;
   createdByTsoId?: string;
-  nationalIdRef: string;
+  nationalIdRef?: string;
   kycStatus: KycStatus;
   savingsBalance: number;
   createdAt: Date;
@@ -27,7 +27,7 @@ const MemberSchema = new Schema<MemberDocument>(
     phone: { type: String, unique: true, sparse: true, index: true, trim: true },
     email: { type: String, trim: true },
     createdByTsoId: { type: String, index: true },
-    nationalIdRef: { type: String, required: true },
+    nationalIdRef: { type: String },
     savingsBalance: { type: Number, required: true, default: 0, min: 0 },
     kycStatus: {
       type: String,

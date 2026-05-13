@@ -7,7 +7,7 @@ export interface CreateMemberPayload {
   email?: string;
   address?: string;
   accountNumber?: string;
-  nationalIdRef: string;
+  nationalIdRef?: string;
 }
 
 export interface UpdateMemberPayload {
