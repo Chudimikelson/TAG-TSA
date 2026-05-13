@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Layout } from '../components/Layout.js';
 import { getAssignments, type Assignment } from '../api/collections.js';
 import {
@@ -36,6 +37,7 @@ function isLegacyNationalId(value?: string): boolean {
 
 export function KycUpdatePage() {
   const { tso } = useAuth();
+  const location = useLocation();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [search, setSearch] = useState('');
@@ -63,9 +65,17 @@ export function KycUpdatePage() {
     getAssignments(tso.tsoId)
       .then((rows) => {
         setAssignments(rows);
+        const state = location.state as { memberId?: string; autoEdit?: boolean } | null;
+        if (state?.memberId) {
+          setSelectedMemberId(state.memberId);
+        }
+        if (state?.autoEdit) {
+          setIsEditing(true);
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tso]);
 
   const filteredAssignments = useMemo(() => {

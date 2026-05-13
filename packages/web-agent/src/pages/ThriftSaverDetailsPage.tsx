@@ -48,7 +48,7 @@ export function ThriftSaverDetailsPage() {
     <Layout
       title="Thrift Saver Details"
       action={
-        <Link to="/thrift-savers" className="btn btn-outline btn-sm">
+        <Link to="/thrift-savers" className="btn btn-outline btn-sm" style={{ textDecoration: 'none' }}>
           Back to Thrift Savers
         </Link>
       }
@@ -90,6 +90,16 @@ export function ThriftSaverDetailsPage() {
             ) : (
               <div className="card-sub" style={{ color: 'var(--warning)' }}>No active plan</div>
             )}
+            <div style={{ marginTop: 14 }}>
+              <Link
+                to="/kyc-update"
+                state={{ memberId: member.memberId, autoEdit: true }}
+                className="btn btn-primary btn-sm"
+                style={{ textDecoration: 'none' }}
+              >
+                Update KYC
+              </Link>
+            </div>
           </div>
         </>
       )}

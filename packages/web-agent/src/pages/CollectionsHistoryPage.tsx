@@ -17,6 +17,9 @@ interface DraftCollection {
   method: 'cash' | 'tsa' | 'tagora_pool';
 }
 
+type CollectionStatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
+type CollectionMethodFilter = 'all' | 'cash' | 'tsa' | 'tagora_pool';
+
 function statusBadge(status: string) {
   const s = status as CollectionStatus;
   const map: Record<CollectionStatus, string> = {
@@ -45,6 +48,9 @@ export function CollectionsHistoryPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CollectionStatusFilter>('all');
+  const [methodFilter, setMethodFilter] = useState<CollectionMethodFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const draftStorageKey = useMemo(
@@ -137,6 +143,84 @@ export function CollectionsHistoryPage() {
   const selectedAssignment = assignments.find(
     ({ member }) => member.memberId === selectedMemberId,
   );
+
+  const memberById = useMemo(() => {
+    const map = new Map<string, Assignment['member']>();
+    assignments.forEach(({ member }) => {
+      map.set(member.memberId, member);
+    });
+    return map;
+  }, [assignments]);
+
+  const planById = useMemo(() => {
+    const map = new Map<string, Assignment['activePlan']>();
+    assignments.forEach(({ activePlan }) => {
+      if (activePlan) {
+        map.set(activePlan.planId, activePlan);
+      }
+    });
+    return map;
+  }, [assignments]);
+
+  const historyCollections = useMemo(
+    () => [...collections].sort((a, b) => Number(new Date(b.timestamp)) - Number(new Date(a.timestamp))),
+    [collections],
+  );
+
+  const normalizedHistorySearch = historySearch.trim().toLowerCase();
+  const filteredCollections = useMemo(() => {
+    return historyCollections.filter((collection) => {
+      if (statusFilter !== 'all' && collection.status !== statusFilter) {
+        return false;
+      }
+
+      if (methodFilter !== 'all' && collection.method !== methodFilter) {
+        return false;
+      }
+
+      if (!normalizedHistorySearch) {
+        return true;
+      }
+
+      const member = memberById.get(collection.memberId);
+      const searchable = [
+        collection.collectionId,
+        collection.memberId,
+        member?.name,
+        member?.phone,
+        member?.accountNumber,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(normalizedHistorySearch);
+    });
+  }, [historyCollections, memberById, methodFilter, normalizedHistorySearch, statusFilter]);
+
+  const summaryCards = useMemo(() => {
+    const todayKey = new Date().toDateString();
+    let pendingCount = 0;
+    let todayTotal = 0;
+    let allTimeTotal = 0;
+
+    collections.forEach((collection) => {
+      allTimeTotal += Number(collection.amount) || 0;
+      if (collection.status === 'pending') {
+        pendingCount += 1;
+      }
+      if (new Date(collection.timestamp).toDateString() === todayKey) {
+        todayTotal += Number(collection.amount) || 0;
+      }
+    });
+
+    return [
+      { label: 'Total Collections', value: collections.length.toLocaleString(), helper: 'All records' },
+      { label: 'Pending Review', value: pendingCount.toLocaleString(), helper: 'Awaiting CSM action' },
+      { label: 'Today Collected', value: `₦${todayTotal.toLocaleString()}`, helper: 'For today' },
+      { label: 'All-time Value', value: `₦${allTimeTotal.toLocaleString()}`, helper: 'Sum of all uploads' },
+    ];
+  }, [collections]);
 
   function resetDialogFields() {
     setQuery('');
@@ -271,6 +355,62 @@ export function CollectionsHistoryPage() {
       {submitSuccess && <div className="success-msg">{submitSuccess}</div>}
       {submitError && <div className="error-msg">{submitError}</div>}
 
+      <div className="collections-summary-grid" style={{ marginBottom: 14 }}>
+        {summaryCards.map((card) => (
+          <div key={card.label} className="card static collections-summary-card">
+            <div className="collections-summary-label">{card.label}</div>
+            <div className="collections-summary-value">{card.value}</div>
+            <div className="card-sub">{card.helper}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card static" style={{ marginBottom: 16 }}>
+        <div className="collections-filters-grid">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <div className="search-input-frame">
+              <label className="search-input-legend" htmlFor="collections-history-search">Find Collection</label>
+              <input
+                className="modern-search-input"
+                id="collections-history-search"
+                type="search"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="Search by customer, phone, account or ID"
+              />
+            </div>
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="collections-status-filter">Status</label>
+            <select
+              id="collections-status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as CollectionStatusFilter)}
+            >
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="collections-method-filter">Method</label>
+            <select
+              id="collections-method-filter"
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value as CollectionMethodFilter)}
+            >
+              <option value="all">All methods</option>
+              <option value="cash">Cash</option>
+              <option value="tsa">Transfer (TSA)</option>
+              <option value="tagora_pool">Transfer (Tagora-Pool)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {drafts.length > 0 && (
         <div className="card static" style={{ marginBottom: 16 }}>
           <div className="row" style={{ marginBottom: 10 }}>
@@ -323,17 +463,49 @@ export function CollectionsHistoryPage() {
         <div className="empty-state">No collections recorded yet.</div>
       )}
 
-      {collections.map((c) => (
+      {!loading && !error && collections.length > 0 && filteredCollections.length === 0 && (
+        <div className="empty-state">No collections match your current filters.</div>
+      )}
+
+      {filteredCollections.map((c) => {
+        const member = memberById.get(c.memberId);
+        const plan = planById.get(c.planId);
+
+        const methodLabel = c.method === 'cash'
+          ? 'Cash'
+          : c.method === 'tsa'
+            ? 'Transfer (TSA)'
+            : 'Transfer (Tagora-Pool)';
+
+        return (
         <div key={c.collectionId} className="card static">
-          <div className="row">
-            <div className="card-amount">₦{Number(c.amount).toLocaleString()}</div>
+          <div className="collections-history-header">
+            <div>
+              <div className="card-title">{member?.name ?? c.memberId}</div>
+              <div className="card-sub">
+                {member?.accountNumber ?? c.memberId}
+              </div>
+            </div>
             <span className={statusBadge(c.status)}>{c.status}</span>
           </div>
-          <div className="card-sub" style={{ marginTop: 6 }}>
-            {new Date(c.timestamp).toLocaleString()} · {c.method}
+
+          <div className="collections-history-metrics">
+            <div className="card-amount">₦{Number(c.amount).toLocaleString()}</div>
+            <div className="card-sub">
+              {new Date(c.timestamp).toLocaleDateString()}
+            </div>
+          </div>
+
+          <div className="collections-history-meta">
+            <span className="badge badge-reconciled">{methodLabel}</span>
+            {plan && (
+              <span className="badge badge-reconciled">
+                {plan.name} · ₦{Number(plan.amount).toLocaleString()} / {plan.frequency}
+              </span>
+            )}
           </div>
         </div>
-      ))}
+      );})}
 
       {showDialog && (
         <div className="modal-overlay" onClick={handleDone}>
