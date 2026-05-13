@@ -5,6 +5,7 @@ type Variant = 'green' | 'red' | 'yellow' | 'blue' | 'gray';
 const STATUS_VARIANTS: Record<string, Variant> = {
   active: 'green',
   approved: 'green',
+  completed: 'green',
   confirmed: 'green',
   matched: 'green',
   reconciled: 'green',

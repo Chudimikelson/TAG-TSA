@@ -176,6 +176,22 @@ export async function updateMember(
   if (Object.prototype.hasOwnProperty.call(input, 'nationalIdRef')) {
     member.nationalIdRef = input.nationalIdRef;
   }
+  if (Object.prototype.hasOwnProperty.call(input, 'createdByTsoId')) {
+    if (actorRole !== 'admin') {
+      throw new AppError(403, 'Only admins can reassign thrift savers');
+    }
+
+    if (!input.createdByTsoId) {
+      throw new AppError(400, 'TSO assignment is required');
+    }
+
+    const tso = await TsoModel.findOne({ tsoId: input.createdByTsoId });
+    if (!tso) {
+      throw new AppError(404, 'Selected TSO not found');
+    }
+
+    member.createdByTsoId = input.createdByTsoId;
+  }
 
   await member.save();
 

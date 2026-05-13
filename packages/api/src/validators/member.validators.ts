@@ -38,6 +38,7 @@ export const updateMemberSchema = z
     address: optionalTrimmedString(2, 200),
     accountNumber: optionalTrimmedString(1, 50),
     nationalIdRef: optionalTrimmedString(1, 100),
+    createdByTsoId: optionalTrimmedString(1, 100),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field is required',

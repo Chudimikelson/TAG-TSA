@@ -40,11 +40,17 @@ export function CollectionsHistoryPage() {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'cash' | 'tsa' | 'tagora_pool'>('cash');
   const [drafts, setDrafts] = useState<DraftCollection[]>([]);
+  const [draftNotice, setDraftNotice] = useState('');
+  const [draftAddCooldown, setDraftAddCooldown] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const draftStorageKey = useMemo(
+    () => (tso ? `tagora:collection-drafts:${tso.tsoId}` : ''),
+    [tso],
+  );
 
   async function loadCollections() {
     setLoading(true);
@@ -69,6 +75,53 @@ export function CollectionsHistoryPage() {
       .catch((e: Error) => setError(e.message));
   }, [tso]);
 
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === 'undefined') return;
+
+    const raw = window.localStorage.getItem(draftStorageKey);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        window.localStorage.removeItem(draftStorageKey);
+        return;
+      }
+
+      const restored = parsed.filter((item): item is DraftCollection => {
+        if (!item || typeof item !== 'object') return false;
+        return (
+          typeof item.id === 'string' &&
+          typeof item.memberId === 'string' &&
+          typeof item.memberName === 'string' &&
+          typeof item.planId === 'string' &&
+          typeof item.amount === 'number' &&
+          (item.method === 'cash' || item.method === 'tsa' || item.method === 'tagora_pool')
+        );
+      });
+
+      setDrafts(restored);
+      if (restored.length > 0) {
+        setSubmitSuccess(
+          `Restored ${restored.length} queued collection${restored.length === 1 ? '' : 's'} from your last session.`,
+        );
+      }
+    } catch {
+      window.localStorage.removeItem(draftStorageKey);
+    }
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === 'undefined') return;
+
+    if (drafts.length === 0) {
+      window.localStorage.removeItem(draftStorageKey);
+      return;
+    }
+
+    window.localStorage.setItem(draftStorageKey, JSON.stringify(drafts));
+  }, [draftStorageKey, drafts]);
+
   const normalizedQuery = query.trim().toLowerCase();
   const filteredAssignments = useMemo(() => {
     if (!normalizedQuery) return assignments;
@@ -90,11 +143,14 @@ export function CollectionsHistoryPage() {
     setSelectedMemberId('');
     setAmount('');
     setMethod('cash');
+    setDraftNotice('');
+    setDraftAddCooldown(false);
   }
 
   function handleOpenDialog() {
     setSubmitError('');
     setSubmitSuccess('');
+    setDraftNotice('');
     setShowDialog(true);
   }
 
@@ -104,8 +160,13 @@ export function CollectionsHistoryPage() {
   }
 
   function handleAddDraft() {
+    if (draftAddCooldown) {
+      return;
+    }
+
     setSubmitError('');
     setSubmitSuccess('');
+    setDraftNotice('');
 
     if (!selectedAssignment) {
       setSubmitError('Select a customer to add.');
@@ -121,6 +182,21 @@ export function CollectionsHistoryPage() {
       setSubmitError('Amount must be a whole number greater than zero.');
       return;
     }
+
+    const duplicateDraft = drafts.find(
+      (draft) =>
+        draft.memberId === selectedAssignment.member.memberId &&
+        draft.planId === selectedAssignment.activePlan?.planId &&
+        draft.amount === amt &&
+        draft.method === method,
+    );
+    if (duplicateDraft) {
+      setSubmitError('This collection is already added to the queue.');
+      return;
+    }
+
+    setDraftAddCooldown(true);
+    window.setTimeout(() => setDraftAddCooldown(false), 500);
 
     const { member, activePlan } = selectedAssignment;
     setDrafts((prev) => [
@@ -138,6 +214,7 @@ export function CollectionsHistoryPage() {
     ]);
     setAmount('');
     setSelectedMemberId('');
+    setDraftNotice(`${member.name} was added to the queue.`);
   }
 
   function handleRemoveDraft(id: string) {
@@ -332,8 +409,12 @@ export function CollectionsHistoryPage() {
               </div>
             </div>
 
+            {draftNotice && <div className="success-msg" style={{ marginTop: 12 }}>{draftNotice}</div>}
+
             <div className="form-actions" style={{ marginTop: 8 }}>
-              <button className="btn btn-primary" type="button" onClick={handleAddDraft}>Add</button>
+              <button className="btn btn-primary" type="button" onClick={handleAddDraft} disabled={draftAddCooldown}>
+                {draftAddCooldown ? 'Adding…' : 'Add'}
+              </button>
               <button className="btn btn-outline" type="button" onClick={handleDone}>Done</button>
             </div>
           </div>
