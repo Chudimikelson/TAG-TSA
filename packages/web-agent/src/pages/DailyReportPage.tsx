@@ -192,9 +192,6 @@ export function DailyReportPage() {
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                 {reportData.validCollections.length} valid transaction{reportData.validCollections.length !== 1 ? 's' : ''}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                Excludes rejected records from totals
-              </div>
             </div>
           </div>
 
@@ -214,9 +211,6 @@ export function DailyReportPage() {
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Total Withdrawals</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#d32f2f' }}>
                 ₦{reportData.withdrawalTotals.effective.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                Deducted from approved/disbursed requests only
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
                 Total requested: ₦{reportData.withdrawalTotals.requested.toLocaleString()} • Pending: ₦{reportData.withdrawalTotals.pending.toLocaleString()} • Rejected: ₦{reportData.withdrawalTotals.rejected.toLocaleString()}
