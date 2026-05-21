@@ -32,7 +32,13 @@ export function Layout() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>Tagora Admin</div>
+        <div className={styles.brand}>
+          <div className={styles.brandLogoWrap}>
+            <img src="/tagora-logo-2.png" alt="Tagora logo" className={styles.brandLogo} />
+          </div>
+          <span className={styles.brandTitle}>TAGORA</span>
+          <span className={styles.brandSubtitle}>Igniting Possibilities</span>
+        </div>
         <nav className={styles.nav}>
           {allLinks.map(({ to, label }) => (
             <NavLink

@@ -430,7 +430,7 @@ export function UserManagementPage() {
       <Table
         rows={filteredRows}
         keyFn={(r) => r.userId}
-        emptyMessage={loading ? 'Loading users...' : 'No users yet.'}
+        emptyMessage={loading ? <div className="spinner" aria-label="Loading users" /> : 'No users yet.'}
         columns={[
           { header: 'Name', render: (r) => r.name },
           { header: 'Email', render: (r) => r.email || '—' },

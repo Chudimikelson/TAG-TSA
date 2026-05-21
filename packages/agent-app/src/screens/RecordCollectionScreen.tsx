@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Image,
   StyleSheet,
   Alert,
@@ -16,6 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createCollection } from '../api/collections.js';
 import { shared, colors } from '../theme.js';
 import type { AppStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RecordCollection'>;
 
@@ -173,11 +173,7 @@ export function RecordCollectionScreen({ route, navigation }: Props) {
         onPress={handleSubmit}
         disabled={busy}
       >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={shared.btnText}>Record Collection</Text>
-        )}
+        {busy ? <TagoraLoader compact /> : <Text style={shared.btnText}>Record Collection</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

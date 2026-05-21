@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -12,6 +11,7 @@ import { getAssignments, type Assignment } from '../api/collections.js';
 import { useAuthStore } from '../store/authStore.js';
 import { shared, colors } from '../theme.js';
 import type { AppStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Assignments'>;
 
@@ -30,11 +30,7 @@ export function AssignmentsScreen({ navigation }: Props) {
   }, [tso]);
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+    return <TagoraLoader fullScreen />;
   }
 
   return (

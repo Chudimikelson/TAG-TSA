@@ -1,13 +1,14 @@
 .heading {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1f36;
+  color: var(--tagora-blue);
   margin: 0 0 24px;
 }
 
 .error {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--tagora-blue);
+  background: var(--tagora-gold-light);
+  border: 1px solid rgba(200, 154, 34, 0.45);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -25,12 +26,12 @@
   align-items: center;
   justify-content: center;
   height: 100px;
-  background: #fff;
+  background: var(--tagora-white);
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   font-weight: 600;
   font-size: 0.95rem;
-  color: #1a1f36;
+  color: var(--tagora-blue);
   text-decoration: none;
   transition: box-shadow 0.15s, transform 0.1s;
   text-align: center;
@@ -46,7 +47,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   margin: 0 0 12px;
-  color: #374151;
+  color: var(--tagora-blue);
 }
 
 .reportGrid {
@@ -57,7 +58,7 @@
 }
 
 .reportCard {
-  background: #fff;
+  background: var(--tagora-white);
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   padding: 16px;
@@ -77,50 +78,50 @@
 
 .reportLabel {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
 .reportSub {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
 .reportValue {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--tagora-blue);
 }
 
 .reportValueLarge {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--tagora-blue);
 }
 
 .reportValueXl {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--tagora-blue);
 }
 
 .reportSelect,
 .reportDateInput {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.9rem;
-  background: #fff;
-  color: #111827;
+  background: var(--tagora-white);
+  color: var(--text-main);
 }
 
 .reportHighlightPositive {
-  background: #eefaf2;
-  border-left: 4px solid #0f766e;
+  background: var(--tagora-blue-3);
+  border-left: 4px solid var(--tagora-blue);
 }
 
 .reportHighlightNegative {
-  background: #fef2f2;
-  border-left: 4px solid #dc2626;
+  background: var(--tagora-gold-light);
+  border-left: 4px solid var(--tagora-gold);
 }

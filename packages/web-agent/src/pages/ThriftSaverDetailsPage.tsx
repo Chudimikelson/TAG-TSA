@@ -53,7 +53,7 @@ export function ThriftSaverDetailsPage() {
         </Link>
       }
     >
-      {loading && <div className="spinner">Loading thrift saver details…</div>}
+      {loading && <div className="spinner" aria-label="Loading thrift saver details" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && !member && (

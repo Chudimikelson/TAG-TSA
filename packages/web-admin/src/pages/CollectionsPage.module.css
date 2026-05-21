@@ -1,0 +1,416 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pageHeading {
+  margin-bottom: 10px;
+}
+
+.controlInput {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  background: var(--tagora-white);
+}
+
+.controlInput:focus {
+  outline: none;
+  border-color: var(--tagora-blue-2);
+}
+
+.splitView {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.45fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.schedulePanel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tagora-white);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  position: sticky;
+  top: 82px;
+  max-height: calc(100vh - 108px);
+  display: flex;
+  flex-direction: column;
+}
+
+.panelHeader {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.panelControls {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr auto;
+  gap: 10px;
+}
+
+.scheduleCardList {
+  display: grid;
+  gap: 0;
+  padding: 0 10px;
+  overflow-y: auto;
+}
+
+.scheduleList {
+  display: grid;
+  gap: 12px;
+}
+
+.scheduleCard {
+  width: 100%;
+  text-align: left;
+  position: relative;
+  border-right: 5px solid transparent;
+  border-top: 0;
+  border-left: 0;
+  border-bottom: 1px solid #e7ebf6;
+  border-radius: 0;
+  background: var(--tagora-white);
+  padding: 12px 4px;
+  box-shadow: none;
+  animation: fadeLift 360ms ease both;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.scheduleCard:hover {
+  background: transparent;
+}
+
+.scheduleCard + .scheduleCard {
+  border-top: 0;
+}
+
+.scheduleCardActive {
+  background: transparent;
+  border-right-color: var(--tagora-gold);
+}
+
+.scheduleCardActive .scheduleTitle {
+  color: var(--tagora-gold);
+  font-weight: 600;
+}
+
+.scheduleCardActive .scheduleAmount {
+  color: var(--tagora-gold);
+}
+
+.scheduleCardActive .scheduleSub {
+  color: var(--tagora-gold);
+}
+
+.scheduleCard:focus-visible {
+  outline: 2px solid rgba(var(--tagora-gold-rgb), 0.55);
+  outline-offset: -2px;
+}
+
+.scheduleMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.scheduleLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.scheduleTitle {
+  margin: 0;
+  color: var(--tagora-blue);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.scheduleSub {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.79rem;
+}
+
+.scheduleRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.scheduleAmount {
+  margin: 0;
+  color: var(--tagora-blue);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.scheduleActions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.pageInfo {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.detailShell {
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 170px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.detailHeading {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcff;
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.groupSection {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tagora-white);
+  overflow: hidden;
+  animation: fadeLift 360ms ease both;
+}
+
+.groupHeading {
+  padding: 8px 12px;
+  background: linear-gradient(90deg, rgba(var(--tagora-gold-rgb), 0.08), rgba(var(--tagora-gold-soft-rgb), 0.2));
+  color: var(--tagora-blue);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.groupList {
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.collectionCard {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fcfdff;
+  animation: fadeLift 360ms ease both;
+}
+
+.collectionTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customerName {
+  margin: 0;
+  color: var(--tagora-blue);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.mutedLine {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.collectionRight {
+  text-align: right;
+}
+
+.amount {
+  margin: 0 0 6px;
+  color: var(--tagora-blue);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.collectionBottom {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.accountNumber {
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  color: var(--text-main);
+  background: var(--tagora-white);
+}
+
+.methodChip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.actionRow {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.emptyState {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #fbfcff;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-align: center;
+  padding: 24px;
+}
+
+.skeletonBlock {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: linear-gradient(90deg, #f5f7fc 0%, #eef2fa 50%, #f5f7fc 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+
+.skeletonLarge {
+  min-height: 120px;
+}
+
+.skeletonMedium {
+  min-height: 82px;
+}
+
+.skeletonTiny {
+  min-height: 36px;
+  margin-top: 10px;
+}
+
+.skeletonLine {
+  height: 11px;
+  border-radius: 999px;
+  background: #e6eaf5;
+  margin-bottom: 8px;
+}
+
+.skeletonLineWide {
+  width: 62%;
+}
+
+.skeletonLineShort {
+  width: 38%;
+}
+
+.skeletonPulse {
+  animation: pulseCard 1.35s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes pulseCard {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+@keyframes fadeLift {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .splitView {
+    grid-template-columns: 1fr;
+  }
+
+  .schedulePanel {
+    position: static;
+    top: auto;
+    max-height: none;
+    display: block;
+  }
+
+  .scheduleCardList {
+    overflow: visible;
+  }
+
+  .detailShell {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .panelControls {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduleMain {
+    flex-direction: column;
+  }
+
+  .scheduleRight {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .scheduleActions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+
+  .paginationRow {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .collectionTop {
+    flex-direction: column;
+  }
+
+  .collectionRight {
+    text-align: left;
+  }
+}

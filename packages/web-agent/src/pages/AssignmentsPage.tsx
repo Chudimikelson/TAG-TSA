@@ -80,7 +80,7 @@ export function AssignmentsPage() {
         </Link>
       }
     >
-      {loading && <div className="spinner">Loading members…</div>}
+      {loading && <div className="spinner" aria-label="Loading members" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && (

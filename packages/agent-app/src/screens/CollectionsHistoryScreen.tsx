@@ -3,13 +3,13 @@ import {
   View,
   Text,
   FlatList,
-  ActivityIndicator,
   StyleSheet,
   RefreshControl,
 } from 'react-native';
 import type { Collection } from '@tagora/shared';
 import { getCollections } from '../api/collections.js';
 import { shared, colors } from '../theme.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: colors.warningLight,
@@ -44,11 +44,7 @@ export function CollectionsHistoryScreen() {
   }, [load]);
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+    return <TagoraLoader fullScreen />;
   }
 
   return (

@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { verifyOtp } from '../api/auth.js';
 import { useAuthStore } from '../store/authStore.js';
 import { shared, colors } from '../theme.js';
 import type { AuthStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'VerifyOtp'>;
 
@@ -59,11 +59,7 @@ export function VerifyOtpScreen({ route }: Props) {
         onPress={handleVerify}
         disabled={busy}
       >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={shared.btnText}>Verify</Text>
-        )}
+        {busy ? <TagoraLoader compact /> : <Text style={shared.btnText}>Verify</Text>}
       </TouchableOpacity>
     </View>
   );

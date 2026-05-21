@@ -253,7 +253,7 @@ export function WithdrawalsPage() {
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <div className="spinner" aria-label="Loading" />
       ) : (
         <Table
           rows={filteredRows}

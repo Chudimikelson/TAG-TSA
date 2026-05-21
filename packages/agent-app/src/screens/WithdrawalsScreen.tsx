@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
@@ -13,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getWithdrawals } from '../api/withdrawals.js';
 import { shared, colors } from '../theme.js';
 import type { AppStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Withdrawals'>;
 
@@ -49,11 +49,7 @@ export function WithdrawalsScreen({ navigation }: Props) {
   }, [load]);
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+    return <TagoraLoader fullScreen />;
   }
 
   return (

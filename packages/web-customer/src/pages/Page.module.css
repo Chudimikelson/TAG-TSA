@@ -8,13 +8,59 @@
 }
 
 .error {
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--status-danger-text);
+  background: var(--status-danger-bg);
   padding: 0.6rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
 }
 
 .loading {
-  color: #6b7280;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 42px 24px;
+  min-height: 56vh;
+  width: 100%;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.loading::before {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: url('/tagora-preloader.png') center/contain no-repeat;
+  opacity: 0.98;
+  filter: drop-shadow(0 2px 6px rgba(var(--tagora-blue-rgb),0.12));
+  animation: tagora-pulse 1.6s ease-in-out infinite;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--tagora-gold-rgb),0.18);
+  border-top-color: rgba(var(--tagora-gold-rgb),0.78);
+  border-right-color: rgba(var(--tagora-gold-soft-rgb),0.65);
+  animation: tagora-spin 1.4s linear infinite;
+}
+
+@keyframes tagora-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes tagora-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.97); }
 }

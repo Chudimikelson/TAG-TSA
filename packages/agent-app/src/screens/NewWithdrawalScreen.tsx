@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Alert,
   StyleSheet,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { createWithdrawal, type CreateWithdrawalPayload } from '../api/withdrawa
 import { useAuthStore } from '../store/authStore.js';
 import { shared, colors } from '../theme.js';
 import type { AppStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'NewWithdrawal'>;
 type DisbursementMethod = CreateWithdrawalPayload['disbursementMethod'];
@@ -120,11 +120,7 @@ export function NewWithdrawalScreen({ navigation }: Props) {
         onPress={handleSubmit}
         disabled={busy}
       >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={shared.btnText}>Submit Request</Text>
-        )}
+        {busy ? <TagoraLoader compact /> : <Text style={shared.btnText}>Submit Request</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

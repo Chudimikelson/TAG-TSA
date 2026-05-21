@@ -131,7 +131,7 @@ export function DashboardPage() {
       <div>
         {error && <p className={styles.error}>{error}</p>}
         {loading ? (
-          <p>Loading…</p>
+          <div className="spinner" aria-label="Loading" />
         ) : (
           <>
             <div className={styles.reportCard}>

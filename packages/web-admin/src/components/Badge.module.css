@@ -7,8 +7,8 @@
   text-transform: capitalize;
 }
 
-.green  { background: #d1fae5; color: #065f46; }
-.red    { background: #fee2e2; color: #991b1b; }
-.yellow { background: #fef9c3; color: #854d0e; }
-.blue   { background: #dbeafe; color: #1e40af; }
-.gray   { background: #f3f4f6; color: #374151; }
+.green  { background: var(--status-positive-bg); color: var(--status-positive-text); }
+.red    { background: var(--status-danger-bg); color: var(--status-danger-text); }
+.yellow { background: var(--status-warning-bg); color: var(--status-warning-text); }
+.blue   { background: var(--status-info-bg); color: var(--status-info-text); }
+.gray   { background: var(--status-neutral-bg); color: var(--status-neutral-text); }

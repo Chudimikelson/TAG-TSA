@@ -3,13 +3,14 @@
 .heading {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1f36;
+  color: var(--tagora-blue);
   margin: 0 0 24px;
 }
 
 .error {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--tagora-blue);
+  background: var(--tagora-gold-light);
+  border: 1px solid rgba(200, 154, 34, 0.45);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -18,8 +19,8 @@
 
 .btnPrimary {
   padding: 7px 14px;
-  background: #4f46e5;
-  color: #fff;
+  background: var(--tagora-blue);
+  color: var(--tagora-white);
   border: none;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -29,14 +30,14 @@
 }
 
 .btnPrimary:hover {
-  background: #4338ca;
+  background: #081734;
 }
 
 .btnDanger {
   padding: 5px 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border: none;
+  background: var(--tagora-gold-light);
+  color: var(--tagora-blue);
+  border: 1px solid rgba(200, 154, 34, 0.45);
   border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 600;
@@ -45,14 +46,14 @@
 }
 
 .btnDanger:hover {
-  background: #fecaca;
+  background: #f1e0ad;
 }
 
 .btnSuccess {
   padding: 5px 12px;
-  background: #d1fae5;
-  color: #065f46;
-  border: none;
+  background: var(--tagora-blue-3);
+  color: var(--tagora-blue);
+  border: 1px solid #c8d5ee;
   border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 600;
@@ -61,13 +62,13 @@
 }
 
 .btnSuccess:hover {
-  background: #a7f3d0;
+  background: #dbe5f6;
 }
 
 .btnSmall {
   padding: 4px 10px;
-  background: #e5e7eb;
-  color: #374151;
+  background: #eef2fb;
+  color: var(--tagora-blue);
   border: none;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -77,7 +78,7 @@
 }
 
 .btnSmall:hover {
-  background: #d1d5db;
+  background: #dfe7f8;
 }
 
 .row {
@@ -87,7 +88,7 @@
 }
 
 .card {
-  background: #fff;
+  background: var(--tagora-white);
   border-radius: 10px;
   padding: 24px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -112,7 +113,7 @@
 
 .input {
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 0.88rem;
   outline: none;
@@ -120,12 +121,12 @@
 }
 
 .input:focus {
-  border-color: #6366f1;
+  border-color: var(--tagora-blue-2);
 }
 
 .textarea {
   padding: 8px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 0.88rem;
   resize: vertical;
@@ -134,12 +135,13 @@
 }
 
 .textarea:focus {
-  border-color: #6366f1;
+  border-color: var(--tagora-blue-2);
 }
 
 .success {
-  color: #065f46;
-  background: #d1fae5;
+  color: var(--tagora-blue);
+  background: var(--tagora-blue-3);
+  border: 1px solid #c8d5ee;
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -150,11 +152,11 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--tagora-blue);
 }
 
 .sectionSub {
   margin: 4px 0 0;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }

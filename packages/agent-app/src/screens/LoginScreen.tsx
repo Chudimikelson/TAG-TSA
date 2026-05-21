@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { login } from '../api/auth.js';
 import { shared, colors } from '../theme.js';
 import type { AuthStackParamList } from '../navigation/types.js';
+import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -67,11 +67,7 @@ export function LoginScreen({ navigation }: Props) {
         onPress={handleLogin}
         disabled={busy}
       >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={shared.btnText}>Continue</Text>
-        )}
+        {busy ? <TagoraLoader compact /> : <Text style={shared.btnText}>Continue</Text>}
       </TouchableOpacity>
     </View>
   );

@@ -21,30 +21,26 @@ export function DailyReportPage() {
   const [error, setError] = useState('');
   const [reportDate, setReportDate] = useState(() => toDateInputValue(new Date()));
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        setError('');
-        const [cols, withs] = await Promise.all([
-          getCollections(),
-          getWithdrawals(),
-        ]);
-        setCollections(cols);
-        setWithdrawals(withs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load');
-      } finally {
-        setLoading(false);
-      }
+  async function loadReport() {
+    try {
+      setLoading(true);
+      setError('');
+      const [cols, withs] = await Promise.all([
+        getCollections(),
+        getWithdrawals(),
+      ]);
+      setCollections(cols);
+      setWithdrawals(withs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  }
 
-  const selectedDateLabel = useMemo(
-    () => new Date(`${reportDate}T00:00:00`).toLocaleDateString('en-NG'),
-    [reportDate],
-  );
+  useEffect(() => {
+    void loadReport();
+  }, []);
 
   const reportData = useMemo(() => {
     const selectedDayKey = new Date(`${reportDate}T00:00:00`).toDateString();
@@ -89,8 +85,6 @@ export function DailyReportPage() {
     });
 
     const totalCollections = Object.values(collectionsByMethod).reduce((a, b) => a + b, 0);
-    const rejectedCollectionsTotal = rejectedCollections.reduce((sum, c) => sum + c.amount, 0);
-
     return {
       dayCollections,
       validCollections,
@@ -98,149 +92,92 @@ export function DailyReportPage() {
       withdrawalTotals,
       collectionsByMethod,
       totalCollections,
-      rejectedCollectionsTotal,
       netAmount: totalCollections - withdrawalTotals.effective,
+      dayWithdrawalCount: dayWithdrawals.length,
     };
   }, [collections, reportDate, withdrawals]);
 
   return (
     <Layout title="Daily Report">
-      {loading && <div className="spinner">Loading…</div>}
+      {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && (
         <>
-          {/* TSO Info Card */}
-          <div className="card static" style={{ marginBottom: 20 }}>
-            <div className="row">
+          <div className="card static daily-report-header-card">
+            <div className="daily-report-header-row">
               <div>
-                <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
-                  TSO
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{tso?.name ?? 'Agent'}</div>
+                <div className="daily-report-label">TSO</div>
+                <div className="daily-report-agent-name">{tso?.name ?? 'Agent'}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 4 }}>
-                  Report Date
-                </div>
+              <div className="daily-report-date-wrap">
+                <div className="daily-report-label">Report Date</div>
                 <input
+                  className="daily-report-date-input"
                   type="date"
                   value={reportDate}
                   onChange={(e) => setReportDate(e.target.value)}
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: '#111827',
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    padding: '8px 10px',
-                    background: 'var(--white)',
-                  }}
                 />
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                  {selectedDateLabel}
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Collections Summary */}
-          <div style={{ marginBottom: 20 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--primary)' }}>
-              Collections
-            </h3>
+          <div className="daily-report-section">
+            <h3 className="daily-report-section-title">Collections</h3>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: 12,
-              }}
-            >
-              {/* Cash */}
+            <div className="daily-report-method-grid">
               <div className="card static">
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Cash</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>₦{reportData.collectionsByMethod.cash.toLocaleString()}</div>
+                <div className="daily-report-label">Cash</div>
+                <div className="daily-report-value">₦{reportData.collectionsByMethod.cash.toLocaleString()}</div>
               </div>
 
-              {/* TSA Transfer */}
               <div className="card static">
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Transfer (TSA)</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>₦{reportData.collectionsByMethod.tsa.toLocaleString()}</div>
+                <div className="daily-report-label">Transfer (TSA)</div>
+                <div className="daily-report-value">₦{reportData.collectionsByMethod.tsa.toLocaleString()}</div>
               </div>
 
-              {/* Tagora-Pool Transfer */}
               <div className="card static">
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Transfer (Pool)</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>₦{reportData.collectionsByMethod.tagora_pool.toLocaleString()}</div>
+                <div className="daily-report-label">Transfer (Pool)</div>
+                <div className="daily-report-value">₦{reportData.collectionsByMethod.tagora_pool.toLocaleString()}</div>
               </div>
             </div>
 
-            {/* Total Collections */}
             <div
               className="card static"
-              style={{
-                marginTop: 12,
-                background: 'var(--primary-light)',
-                borderLeft: '4px solid var(--primary)',
-              }}
+              style={{ marginTop: 12, background: 'var(--primary-light)', borderLeft: '4px solid var(--primary)' }}
             >
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Total Collections</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--primary)' }}>
-                ₦{reportData.totalCollections.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+              <div className="daily-report-label">Total Collections</div>
+              <div className="daily-report-total-positive">₦{reportData.totalCollections.toLocaleString()}</div>
+              <div className="daily-report-caption">
                 {reportData.validCollections.length} valid transaction{reportData.validCollections.length !== 1 ? 's' : ''}
               </div>
             </div>
           </div>
 
-          {/* Withdrawals Summary */}
-          <div style={{ marginBottom: 20 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--primary)' }}>
-              Withdrawals
-            </h3>
+          <div className="daily-report-section">
+            <h3 className="daily-report-section-title">Withdrawals</h3>
 
             <div
               className="card static"
-              style={{
-                background: '#fef3f2',
-                borderLeft: '4px solid #d32f2f',
-              }}
+              style={{ background: '#fef3f2', borderLeft: '4px solid #d32f2f' }}
             >
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Total Withdrawals</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#d32f2f' }}>
-                ₦{reportData.withdrawalTotals.effective.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              <div className="daily-report-label">Total Withdrawals</div>
+              <div className="daily-report-total-negative">₦{reportData.withdrawalTotals.effective.toLocaleString()}</div>
+              <div className="daily-report-caption">
                 Total requested: ₦{reportData.withdrawalTotals.requested.toLocaleString()} • Pending: ₦{reportData.withdrawalTotals.pending.toLocaleString()} • Rejected: ₦{reportData.withdrawalTotals.rejected.toLocaleString()}
               </div>
             </div>
           </div>
 
-          {/* Net Summary */}
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: 'var(--primary)' }}>
-              Closing Balance
-            </h3>
+          <div className="daily-report-section">
+            <h3 className="daily-report-section-title">Closing Balance</h3>
 
             <div
               className="card static"
-              style={{
-                background: reportData.netAmount >= 0 ? '#f0f7ff' : '#fef3f2',
-                borderLeft: `4px solid ${reportData.netAmount >= 0 ? 'var(--primary)' : '#d32f2f'}`,
-              }}
+              style={{ background: reportData.netAmount >= 0 ? '#f0f7ff' : '#fef3f2', borderLeft: `4px solid ${reportData.netAmount >= 0 ? 'var(--primary)' : '#d32f2f'}` }}
             >
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
-                Net Amount (Collections - Effective Withdrawals)
-              </div>
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: reportData.netAmount >= 0 ? 'var(--primary)' : '#d32f2f',
-                }}
-              >
+              <div className="daily-report-label">Net Amount (Collections - Effective Withdrawals)</div>
+              <div className={`daily-report-net ${reportData.netAmount >= 0 ? 'is-positive' : 'is-negative'}`}>
                 ₦{reportData.netAmount.toLocaleString()}
               </div>
             </div>

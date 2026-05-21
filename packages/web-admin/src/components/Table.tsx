@@ -10,7 +10,7 @@ interface TableProps<T> {
   columns: Column<T>[];
   rows: T[];
   keyFn: (row: T) => string;
-  emptyMessage?: string;
+  emptyMessage?: ReactNode;
 }
 
 export function Table<T>({ columns, rows, keyFn, emptyMessage = 'No records.' }: TableProps<T>) {

@@ -2,8 +2,89 @@
   box-sizing: border-box;
 }
 
+:root {
+  --tagora-blue: #14176c;
+  --tagora-blue-rgb: 20, 23, 108;
+  --tagora-blue-2: #3e4073;
+  --tagora-blue-3: #eef0fb;
+  --tagora-gold: #bc9c22;
+  --tagora-gold-rgb: 188, 156, 34;
+  --tagora-gold-soft-rgb: 248, 241, 217;
+  --tagora-gold-light: #f8f1d9;
+  --tagora-white: #ffffff;
+  --text-main: #3e4073;
+  --text-muted: #6a6c94;
+  --line: #d6dcec;
+  --status-positive-bg: #eef0fb;
+  --status-positive-text: #14176c;
+  --status-warning-bg: #fff4d0;
+  --status-warning-text: #8a6a14;
+  --status-danger-bg: #fef2f2;
+  --status-danger-text: #b91c1c;
+  --status-info-bg: #dfe5f8;
+  --status-info-text: #14176c;
+  --status-neutral-bg: #f2f4fa;
+  --status-neutral-text: #4b5876;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  color: var(--text-main);
+  background: #f7f9fd;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+.spinner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 42px 36px;
+  min-height: 56vh;
+  width: 100%;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.spinner::before {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: url('/tagora-preloader.png') center/contain no-repeat;
+  opacity: 0.98;
+  filter: drop-shadow(0 2px 6px rgba(var(--tagora-blue-rgb),0.12));
+  animation: tagora-pulse 1.6s ease-in-out infinite;
+}
+
+.spinner::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--tagora-gold-rgb),0.18);
+  border-top-color: rgba(var(--tagora-gold-rgb),0.78);
+  border-right-color: rgba(var(--tagora-gold-soft-rgb),0.65);
+  animation: tagora-spin 1.4s linear infinite;
+}
+
+@keyframes tagora-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes tagora-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.97); }
 }

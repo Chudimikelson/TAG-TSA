@@ -120,7 +120,7 @@ export function TsosPage() {
       <Table
         rows={rows}
         keyFn={(r) => r.tsoId}
-        emptyMessage={loading ? 'Loading report...' : 'No TSOs yet.'}
+        emptyMessage={loading ? <div className="spinner" aria-label="Loading report" /> : 'No TSOs yet.'}
         columns={[
           { header: 'Name', render: (r) => r.name },
           { header: 'Phone', render: (r) => r.phone },

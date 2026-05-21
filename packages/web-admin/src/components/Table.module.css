@@ -6,7 +6,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
-  background: #fff;
+  background: var(--tagora-white);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -15,19 +15,19 @@
 .table th {
   text-align: left;
   padding: 12px 16px;
-  background: #f9fafb;
+  background: #f3f6fc;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--line);
 }
 
 .table td {
   padding: 12px 16px;
-  color: #111827;
-  border-bottom: 1px solid #f3f4f6;
+  color: var(--text-main);
+  border-bottom: 1px solid #edf1fa;
   vertical-align: middle;
 }
 
@@ -36,11 +36,11 @@
 }
 
 .table tr:hover td {
-  background: #fafafa;
+  background: #f8f4e6;
 }
 
 .empty {
   text-align: center;
-  color: #9ca3af;
+  color: var(--text-muted);
   padding: 32px !important;
 }

@@ -48,7 +48,7 @@ export function TransactionsPage() {
       <h1 className={styles.heading}>Unmatched Transactions</h1>
       {error && <p className={styles.error}>{error}</p>}
       {loading ? (
-        <p>Loading…</p>
+        <div className="spinner" aria-label="Loading" />
       ) : (
         <Table
           rows={rows}
@@ -102,3 +102,4 @@ export function TransactionsPage() {
     </div>
   );
 }
+        <div className="spinner">Loading…</div>

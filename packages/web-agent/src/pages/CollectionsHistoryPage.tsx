@@ -456,7 +456,7 @@ export function CollectionsHistoryPage() {
         </div>
       )}
 
-      {loading && <div className="spinner">Loading…</div>}
+      {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && collections.length === 0 && (

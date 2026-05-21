@@ -42,7 +42,7 @@ export function WithdrawalsPage() {
         </button>
       }
     >
-      {loading && <div className="spinner">Loading…</div>}
+      {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && withdrawals.length === 0 && (

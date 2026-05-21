@@ -14,7 +14,7 @@ export function DashboardPage() {
   }, []);
 
   if (error) return <div className={styles.error}>{error}</div>;
-  if (!data) return <p className={styles.loading}>Loading…</p>;
+  if (!data) return <div className={styles.loading} aria-label="Loading" />;
 
   const { member, plans } = data;
   const activePlan = plans.find((p) => p.status === 'active');

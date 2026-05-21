@@ -92,8 +92,11 @@ export function Layout({ title, action, mobileAction, children }: LayoutProps) {
 
       <aside className="sidebar">
         <div className="sidebar-logo">
-          Tagora
-          <span>TSO Portal</span>
+          <div className="sidebar-logo-mark-wrap">
+            <img src="/tagora-logo-2.png" alt="Tagora logo" className="sidebar-logo-mark" />
+          </div>
+          <div className="sidebar-logo-title">TAGORA</div>
+          <span className="sidebar-logo-subtitle">Igniting Possibilities</span>
         </div>
 
         <nav className="sidebar-nav" id="agent-sidebar-nav">

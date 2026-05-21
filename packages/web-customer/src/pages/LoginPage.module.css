@@ -72,8 +72,8 @@
 }
 
 .error {
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--status-danger-text);
+  background: var(--status-danger-bg);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   margin-bottom: 0.75rem;

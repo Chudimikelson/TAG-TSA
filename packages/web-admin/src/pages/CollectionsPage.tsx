@@ -4,8 +4,8 @@ import { confirmCollection, getCollections, rejectCollection } from '../api/coll
 import { getMembers } from '../api/members.js';
 import { getTsos } from '../api/tsos.js';
 import { Badge } from '../components/Badge.js';
-import { Table } from '../components/Table.js';
-import styles from './Page.module.css';
+import pageStyles from './Page.module.css';
+import styles from './CollectionsPage.module.css';
 
 type EnrichedCollectionRow = Collection & {
   customerName: string;
@@ -26,6 +26,7 @@ interface CollectionSchedule {
 }
 
 const SCHEDULE_GAP_MS = 2 * 60 * 1000;
+const SCHEDULES_PAGE_SIZE = 5;
 
 function toEpochMs(value: Date | string): number {
   const ts = new Date(value).getTime();
@@ -106,12 +107,42 @@ function escapeCsv(value: string | number): string {
   return text;
 }
 
+function formatDateTime(value: number): string {
+  return new Date(value).toLocaleString('en-NG', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function toDayKey(value: number): string {
+  const d = new Date(value);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function dayLabel(value: number): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const rowDay = new Date(new Date(value).getFullYear(), new Date(value).getMonth(), new Date(value).getDate());
+
+  if (rowDay.getTime() === today.getTime()) return 'Today';
+  if (rowDay.getTime() === yesterday.getTime()) return 'Yesterday';
+  return rowDay.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export function CollectionsPage() {
   const [rows, setRows] = useState<EnrichedCollectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copiedRowId, setCopiedRowId] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest' | 'pending-first'>('newest');
+  const [schedulePage, setSchedulePage] = useState(1);
 
   async function load() {
     setLoading(true);
@@ -189,6 +220,57 @@ export function CollectionsPage() {
 
   const schedules = useMemo(() => buildSchedules(filteredRows), [filteredRows]);
 
+  const visibleSchedules = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    let next = [...schedules];
+
+    if (q) {
+      next = next.filter((schedule) => {
+        const ref = schedule.scheduleId.slice(-10).toLowerCase();
+        return schedule.tsoName.toLowerCase().includes(q) || ref.includes(q);
+      });
+    }
+
+    switch (sortBy) {
+      case 'oldest':
+        next.sort((a, b) => a.uploadedAtMs - b.uploadedAtMs);
+        break;
+      case 'highest':
+        next.sort((a, b) => b.totalAmount - a.totalAmount);
+        break;
+      case 'lowest':
+        next.sort((a, b) => a.totalAmount - b.totalAmount);
+        break;
+      case 'pending-first':
+        next.sort((a, b) => {
+          if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
+          return b.uploadedAtMs - a.uploadedAtMs;
+        });
+        break;
+      default:
+        next.sort((a, b) => b.uploadedAtMs - a.uploadedAtMs);
+        break;
+    }
+
+    return next;
+  }, [schedules, searchTerm, sortBy]);
+
+  const totalSchedulePages = Math.max(1, Math.ceil(visibleSchedules.length / SCHEDULES_PAGE_SIZE));
+
+  useEffect(() => {
+    if (schedulePage <= totalSchedulePages) return;
+    setSchedulePage(totalSchedulePages);
+  }, [schedulePage, totalSchedulePages]);
+
+  useEffect(() => {
+    setSchedulePage(1);
+  }, [searchTerm, sortBy]);
+
+  const pagedSchedules = useMemo(() => {
+    const start = (schedulePage - 1) * SCHEDULES_PAGE_SIZE;
+    return visibleSchedules.slice(start, start + SCHEDULES_PAGE_SIZE);
+  }, [schedulePage, visibleSchedules]);
+
   const selectedSchedule = useMemo(
     () => schedules.find((schedule) => schedule.scheduleId === selectedScheduleId),
     [schedules, selectedScheduleId],
@@ -201,18 +283,32 @@ export function CollectionsPage() {
     }
   }, [selectedSchedule, selectedScheduleId]);
 
-  const summary = useMemo(() => {
-    const totalAmount = schedules.reduce((sum, schedule) => sum + Number(schedule.totalAmount), 0);
-    const pendingCount = schedules.filter((schedule) => schedule.status === 'pending').length;
-    const completedCount = schedules.filter((schedule) => schedule.status === 'completed').length;
+  useEffect(() => {
+    if (selectedScheduleId) return;
+    if (pagedSchedules.length === 0) return;
+    setSelectedScheduleId(pagedSchedules[0].scheduleId);
+  }, [pagedSchedules, selectedScheduleId]);
 
-    return {
-      totalCount: schedules.length,
-      totalAmount,
-      pendingCount,
-      completedCount,
-    };
-  }, [schedules]);
+  const selectedScheduleGroups = useMemo(() => {
+    if (!selectedSchedule) return [] as Array<{ key: string; label: string; rows: EnrichedCollectionRow[] }>;
+    const sorted = [...selectedSchedule.collections].sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
+    const grouped = new Map<string, EnrichedCollectionRow[]>();
+    for (const row of sorted) {
+      const ts = toEpochMs(row.timestamp);
+      const key = toDayKey(ts);
+      const list = grouped.get(key) ?? [];
+      list.push(row);
+      grouped.set(key, list);
+    }
+
+    return Array.from(grouped.entries())
+      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+      .map(([key, rows]) => ({
+        key,
+        label: dayLabel(toEpochMs(rows[0].timestamp)),
+        rows,
+      }));
+  }, [selectedSchedule]);
 
   function handleExportScheduleCsv(schedule: CollectionSchedule) {
     const csv = [
@@ -240,130 +336,193 @@ export function CollectionsPage() {
   }
 
   return (
-    <div>
-      <h1 className={styles.heading}>Collections</h1>
-      {error && <p className={styles.error}>{error}</p>}
+    <div className={styles.page}>
+      <h1 className={`${pageStyles.heading} ${styles.pageHeading}`}>Collection Schedules</h1>
+      {error && <p className={pageStyles.error}>{error}</p>}
 
-      <div className={styles.card}>
-        <div className={styles.formGrid}>
-          <div className={styles.label}><span>Total Schedules</span><strong>{summary.totalCount}</strong></div>
-          <div className={styles.label}><span>Total Amount</span><strong>₦{summary.totalAmount.toLocaleString()}</strong></div>
-          <div className={styles.label}><span>Pending</span><strong>{summary.pendingCount}</strong></div>
-            <div className={styles.label}><span>Completed</span><strong>{summary.completedCount}</strong></div>
-        </div>
-      </div>
-
-      {loading ? (
-        <p>Loading…</p>
-      ) : (
-        selectedSchedule ? (
-          <div>
-            <div className={styles.card}>
-              <div className={styles.row} style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-                <div>
-                  <p className={styles.sectionTitle}>Schedule Review</p>
-                  <p className={styles.sectionSub}>
-                    {selectedSchedule.tsoName} · {new Date(selectedSchedule.uploadedAtMs).toLocaleDateString('en-NG')} · {selectedSchedule.collections.length} collection{selectedSchedule.collections.length === 1 ? '' : 's'}
-                  </p>
-                </div>
-                <button className={styles.btnSmall} type="button" onClick={() => setSelectedScheduleId('')}>
-                  Back To Schedules
-                </button>
-              </div>
-              <div className={styles.formGrid}>
-                <div className={styles.label}><span>Total Amount</span><strong>₦{selectedSchedule.totalAmount.toLocaleString()}</strong></div>
-                <div className={styles.label}><span>Status</span><strong><Badge value={selectedSchedule.status} /></strong></div>
-              </div>
+      <section className={styles.splitView}>
+        <article className={styles.schedulePanel}>
+          <div className={styles.panelHeader}>
+            <div className={styles.panelControls}>
+              <input
+                className={styles.controlInput}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by TSO or schedule ref"
+                aria-label="Search schedules"
+              />
+              <select
+                className={styles.controlInput}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest' | 'pending-first')}
+                aria-label="Sort schedules"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="highest">Highest Amount</option>
+                <option value="lowest">Lowest Amount</option>
+                <option value="pending-first">Pending First</option>
+              </select>
+              <button className={pageStyles.btnSmall} type="button" onClick={() => void load()}>
+                Refresh
+              </button>
             </div>
-
-            <Table
-              rows={selectedSchedule.collections}
-              keyFn={(r) => r.collectionId}
-              emptyMessage="No collections in this schedule."
-              columns={[
-                {
-                  header: 'Account Number',
-                  render: (r) => (
-                    <span className={styles.row}>
-                      <span>{r.accountNumber}</span>
-                      <button
-                        type="button"
-                        className={styles.btnSmall}
-                        onClick={() => handleCopyAccount(r.accountNumber, r.collectionId)}
-                        title="Copy account number"
-                        aria-label="Copy account number"
-                      >
-                        {copiedRowId === r.collectionId ? 'Copied' : '⧉'}
-                      </button>
-                    </span>
-                  ),
-                },
-                { header: 'Customer Name', render: (r) => r.customerName },
-                { header: 'TSO', render: (r) => r.tsoName },
-                { header: 'Amount (₦)', render: (r) => r.amount.toLocaleString() },
-                { header: 'Method', render: (r) => r.method },
-                { header: 'Status', render: (r) => <Badge value={r.status} /> },
-                {
-                  header: 'Date',
-                  render: (r) => new Date(r.timestamp).toLocaleDateString('en-NG'),
-                },
-                {
-                  header: 'Actions',
-                  render: (r) =>
-                    r.status === 'pending' ? (
-                      <span className={styles.row}>
-                        <button
-                          className={styles.btnSuccess}
-                          onClick={() => handleConfirm(r.collectionId)}
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          className={styles.btnDanger}
-                          onClick={() => handleReject(r.collectionId)}
-                        >
-                          Reject
-                        </button>
-                      </span>
-                    ) : (
-                      '—'
-                    ),
-                },
-              ]}
-            />
           </div>
-        ) : (
-          <Table
-            rows={schedules}
-            keyFn={(r) => r.scheduleId}
-            emptyMessage="No schedules found."
-            columns={[
-              { header: 'Schedule Ref', render: (r) => r.scheduleId.slice(-10) },
-              { header: 'TSO Name', render: (r) => r.tsoName },
-              { header: 'Items', render: (r) => r.collections.length },
-              { header: 'Total (₦)', render: (r) => r.totalAmount.toLocaleString() },
-              { header: 'Status', render: (r) => <Badge value={r.status} /> },
-              {
-                header: 'Date',
-                render: (r) => new Date(r.uploadedAtMs).toLocaleDateString('en-NG'),
-              },
-              {
-                header: 'Actions',
-                render: (r) => (
-                  <span className={styles.row}>
-                    <button className={styles.btnPrimary} type="button" onClick={() => setSelectedScheduleId(r.scheduleId)}>
-                      Open Schedule
-                    </button>
-                    <button className={styles.btnSmall} type="button" onClick={() => handleExportScheduleCsv(r)}>
-                      Export CSV
-                    </button>
-                  </span>
-                ),
-              },
-            ]}
-          />
-        )
-      )}
+
+          {loading ? (
+            <div className={styles.scheduleCardList}>
+              {[0, 1, 2, 3].map((idx) => (
+                <article key={idx} className={`${styles.scheduleCard} ${styles.skeletonPulse}`}>
+                  <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
+                  <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                  <div className={`${styles.skeletonBlock} ${styles.skeletonTiny}`} />
+                </article>
+              ))}
+            </div>
+          ) : visibleSchedules.length === 0 ? (
+            <div className={styles.emptyState}>No schedules found for this filter.</div>
+          ) : (
+            <div className={styles.scheduleCardList}>
+              {pagedSchedules.map((r, idx) => (
+                <article
+                  key={r.scheduleId}
+                  className={`${styles.scheduleCard} ${selectedScheduleId === r.scheduleId ? styles.scheduleCardActive : ''}`}
+                  style={{ animationDelay: `${idx * 35}ms` }}
+                  onClick={() => setSelectedScheduleId(r.scheduleId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedScheduleId(r.scheduleId);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className={styles.scheduleMain}>
+                    <div className={styles.scheduleLeft}>
+                      <p className={styles.scheduleTitle}>{r.tsoName}</p>
+                      <p className={styles.scheduleAmount}>₦{r.totalAmount.toLocaleString()}</p>
+                      <p className={styles.scheduleSub}>{formatDateTime(r.uploadedAtMs)}</p>
+                    </div>
+                    <div className={styles.scheduleRight}>
+                      <Badge value={r.status} />
+                      <div className={styles.scheduleActions}>
+                        <button
+                          className={pageStyles.btnSmall}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportScheduleCsv(r);
+                          }}
+                        >
+                          Export CSV
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {!loading && visibleSchedules.length > 0 && (
+            <div className={styles.paginationRow}>
+              <button
+                className={pageStyles.btnSmall}
+                type="button"
+                onClick={() => setSchedulePage((p) => Math.max(1, p - 1))}
+                disabled={schedulePage <= 1}
+              >
+                Previous
+              </button>
+              <span className={styles.pageInfo}>Page {schedulePage} of {totalSchedulePages}</span>
+              <button
+                className={pageStyles.btnSmall}
+                type="button"
+                onClick={() => setSchedulePage((p) => Math.min(totalSchedulePages, p + 1))}
+                disabled={schedulePage >= totalSchedulePages}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </article>
+
+        <section className={styles.detailShell}>
+          {loading ? (
+            <>
+              <div className={`${styles.skeletonBlock} ${styles.skeletonLarge}`} />
+              {[0, 1].map((idx) => (
+                <div key={idx} className={`${styles.skeletonBlock} ${styles.skeletonMedium}`} />
+              ))}
+            </>
+          ) : selectedSchedule ? (
+            <>
+              <div className={styles.detailHeading}>
+                <p className={pageStyles.sectionTitle}>Schedule Items</p>
+                <p className={pageStyles.sectionSub}>
+                  {selectedSchedule.tsoName} · {selectedSchedule.collections.length} collection{selectedSchedule.collections.length === 1 ? '' : 's'}
+                </p>
+              </div>
+              {selectedScheduleGroups.length === 0 ? (
+                <div className={styles.emptyState}>No collections in this schedule.</div>
+              ) : (
+                selectedScheduleGroups.map((group, groupIndex) => (
+                  <section key={group.key} className={styles.groupSection} style={{ animationDelay: `${groupIndex * 35}ms` }}>
+                    <div className={styles.groupHeading}>{group.label}</div>
+                    <div className={styles.groupList}>
+                      {group.rows.map((r, rowIndex) => (
+                        <article
+                          key={r.collectionId}
+                          className={styles.collectionCard}
+                          style={{ animationDelay: `${rowIndex * 30}ms` }}
+                        >
+                          <div className={styles.collectionTop}>
+                            <div>
+                              <p className={styles.customerName}>{r.customerName}</p>
+                              <p className={styles.mutedLine}>{r.tsoName} · {formatDateTime(toEpochMs(r.timestamp))}</p>
+                            </div>
+                            <div className={styles.collectionRight}>
+                              <p className={styles.amount}>₦{r.amount.toLocaleString()}</p>
+                              <Badge value={r.status} />
+                            </div>
+                          </div>
+                          <div className={styles.collectionBottom}>
+                            <span className={styles.accountNumber}>{r.accountNumber}</span>
+                            <button
+                              type="button"
+                              className={pageStyles.btnSmall}
+                              onClick={() => handleCopyAccount(r.accountNumber, r.collectionId)}
+                              title="Copy account number"
+                              aria-label="Copy account number"
+                            >
+                              {copiedRowId === r.collectionId ? 'Copied' : 'Copy Acct'}
+                            </button>
+                            <span className={styles.methodChip}>{r.method}</span>
+                            {r.status === 'pending' && (
+                              <span className={styles.actionRow}>
+                                <button className={pageStyles.btnSuccess} onClick={() => handleConfirm(r.collectionId)}>
+                                  Confirm
+                                </button>
+                                <button className={pageStyles.btnDanger} onClick={() => handleReject(r.collectionId)}>
+                                  Reject
+                                </button>
+                              </span>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              )}
+            </>
+          ) : (
+            <div className={styles.emptyState}>Select a schedule to review collections.</div>
+          )}
+        </section>
+      </section>
     </div>
   );
 }
