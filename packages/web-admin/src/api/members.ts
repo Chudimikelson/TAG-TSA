@@ -33,3 +33,24 @@ export function updateMember(memberId: string, input: UpdateMemberInput): Promis
     body: JSON.stringify(input),
   });
 }
+
+export interface BalanceUpdateRow {
+  accountNumber: string;
+  balance: number;
+}
+
+export interface BalanceUpdateResult {
+  accountNumber: string;
+  status: 'updated' | 'not_found' | 'invalid';
+  name?: string;
+  previousBalance?: number;
+}
+
+export function bulkUpdateDepositBalances(
+  updates: BalanceUpdateRow[],
+): Promise<{ success: boolean; data: BalanceUpdateResult[] }> {
+  return request<{ success: boolean; data: BalanceUpdateResult[] }>('/admin/members/bulk-balance', {
+    method: 'POST',
+    body: JSON.stringify({ updates }),
+  });
+}

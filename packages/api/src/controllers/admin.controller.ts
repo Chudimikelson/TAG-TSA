@@ -12,6 +12,7 @@ import {
   updateAdminRole,
   updateAdminStatus,
 } from '../services/admin.service.js';
+import { bulkUpdateDepositBalances, BulkBalanceUpdate } from '../services/member.service.js';
 import {
   CreateAdminBody,
   UpdateAdminBody,
@@ -156,6 +157,28 @@ export async function handleUpdateAdmin(
   try {
     const admin = await updateAdmin(req.params.id, req.body, req.actor!.sub);
     res.json({ success: true, data: admin });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleBulkUpdateDepositBalances(
+  req: Request<object, object, { updates: BulkBalanceUpdate[] }>,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { updates } = req.body;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      res.status(400).json({ success: false, error: 'updates must be a non-empty array' });
+      return;
+    }
+    if (updates.length > 1000) {
+      res.status(400).json({ success: false, error: 'Maximum 1000 rows per upload' });
+      return;
+    }
+    const results = await bulkUpdateDepositBalances(updates, req.actor!.sub);
+    res.json({ success: true, data: results });
   } catch (err) {
     next(err);
   }

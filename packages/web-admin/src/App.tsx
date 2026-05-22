@@ -11,6 +11,7 @@ import { ReconciliationPage } from './pages/ReconciliationPage.js';
 import { MembersPage } from './pages/MembersPage.js';
 import { TsosPage } from './pages/TsosPage.js';
 import { UserManagementPage } from './pages/UserManagementPage.js';
+import { DepositBalancePage } from './pages/DepositBalancePage.js';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -39,6 +40,14 @@ const router = createBrowserRouter([
             element: (
               <RoleGuard requiredRole="SuperAdmin">
                 <UserManagementPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'deposit-balance',
+            element: (
+              <RoleGuard requiredRole="SuperAdmin">
+                <DepositBalancePage />
               </RoleGuard>
             ),
           },

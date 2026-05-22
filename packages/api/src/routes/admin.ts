@@ -13,6 +13,7 @@ import {
 	handleUpdateAdmin,
 	handleUpdateAdminRole,
 	handleUpdateAdminStatus,
+	handleBulkUpdateDepositBalances,
 } from '../controllers/admin.controller.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -81,3 +82,6 @@ adminRouter.patch('/users/:id/role', requireSuperAdmin, validate(updateAdminRole
 
 // PATCH /admin/users/:id/status - Update admin status (active/suspended)
 adminRouter.patch('/users/:id/status', requireSuperAdmin, validate(updateAdminStatusSchema), handleUpdateAdminStatus);
+
+// POST /admin/members/bulk-balance - Bulk update deposit balances (SuperAdmin only)
+adminRouter.post('/members/bulk-balance', requireSuperAdmin, handleBulkUpdateDepositBalances);

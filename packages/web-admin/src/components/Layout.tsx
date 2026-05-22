@@ -14,6 +14,7 @@ const NAV_LINKS = [
 
 const ADMIN_ONLY_LINKS = [
   { to: '/user-management', label: 'User Management', requiredAdminRole: 'SuperAdmin' },
+  { to: '/deposit-balance', label: 'Deposit Balance Upload', requiredAdminRole: 'SuperAdmin' },
 ];
 
 export function Layout() {

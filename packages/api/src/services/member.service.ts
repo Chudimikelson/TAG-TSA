@@ -303,3 +303,67 @@ export async function updateMemberPlan(
 
   return plan;
 }
+
+// ---------------------------------------------------------------------------
+// Bulk balance update
+// ---------------------------------------------------------------------------
+
+export interface BulkBalanceUpdate {
+  accountNumber: string;
+  balance: number;
+}
+
+export interface BulkBalanceResult {
+  accountNumber: string;
+  status: 'updated' | 'not_found' | 'invalid';
+  name?: string;
+  previousBalance?: number;
+}
+
+export async function bulkUpdateDepositBalances(
+  updates: BulkBalanceUpdate[],
+  actorId: string,
+): Promise<BulkBalanceResult[]> {
+  const results: BulkBalanceResult[] = [];
+
+  for (const update of updates) {
+    if (
+      typeof update.balance !== 'number' ||
+      !Number.isFinite(update.balance) ||
+      update.balance < 0
+    ) {
+      results.push({ accountNumber: update.accountNumber, status: 'invalid' });
+      continue;
+    }
+
+    const member = await MemberModel.findOne({ accountNumber: update.accountNumber });
+    if (!member) {
+      results.push({ accountNumber: update.accountNumber, status: 'not_found' });
+      continue;
+    }
+
+    const previousBalance = member.savingsBalance;
+    member.savingsBalance = update.balance;
+    await member.save();
+
+    await audit({
+      actorId,
+      action: 'member.balance_updated',
+      targetId: member.memberId,
+      metadata: {
+        accountNumber: update.accountNumber,
+        previousBalance,
+        newBalance: update.balance,
+      },
+    });
+
+    results.push({
+      accountNumber: update.accountNumber,
+      status: 'updated',
+      name: member.name,
+      previousBalance,
+    });
+  }
+
+  return results;
+}
