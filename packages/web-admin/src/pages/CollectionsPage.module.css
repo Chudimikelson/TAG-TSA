@@ -189,6 +189,10 @@
 }
 
 .detailHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fbfcff;
@@ -196,6 +200,16 @@
   position: sticky;
   top: 0;
   z-index: 3;
+}
+
+.detailActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailActions .controlInput {
+  min-width: 148px;
 }
 
 .groupSection {
@@ -408,6 +422,16 @@
 
   .collectionTop {
     flex-direction: column;
+  }
+
+  .detailHeading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .detailActions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .collectionRight {

@@ -80,6 +80,12 @@ export function AssignmentsPage() {
         </Link>
       }
     >
+      <div className="mobile-thrift-saver-add-wrap">
+        <Link to="/thrift-savers/add" className="btn btn-primary btn-sm mobile-thrift-saver-add-btn">
+          + Add Thrift Saver
+        </Link>
+      </div>
+
       {loading && <div className="spinner" aria-label="Loading members" />}
       {error && <div className="error-msg">{error}</div>}
 

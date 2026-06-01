@@ -140,6 +140,7 @@ export function CollectionsPage() {
   const [error, setError] = useState('');
   const [copiedRowId, setCopiedRowId] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState<'all' | Collection['method']>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest' | 'pending-first'>('newest');
   const [schedulePage, setSchedulePage] = useState(1);
@@ -276,6 +277,11 @@ export function CollectionsPage() {
     [schedules, selectedScheduleId],
   );
 
+  const methodOptions = useMemo(() => {
+    if (!selectedSchedule) return [] as Collection['method'][];
+    return Array.from(new Set(selectedSchedule.collections.map((row) => row.method))).sort();
+  }, [selectedSchedule]);
+
   useEffect(() => {
     if (!selectedScheduleId) return;
     if (!selectedSchedule) {
@@ -289,9 +295,22 @@ export function CollectionsPage() {
     setSelectedScheduleId(pagedSchedules[0].scheduleId);
   }, [pagedSchedules, selectedScheduleId]);
 
+  useEffect(() => {
+    if (selectedMethod === 'all') return;
+    if (methodOptions.includes(selectedMethod)) return;
+    setSelectedMethod('all');
+  }, [methodOptions, selectedMethod]);
+
+  useEffect(() => {
+    setSelectedMethod('all');
+  }, [selectedScheduleId]);
+
   const selectedScheduleGroups = useMemo(() => {
     if (!selectedSchedule) return [] as Array<{ key: string; label: string; rows: EnrichedCollectionRow[] }>;
-    const sorted = [...selectedSchedule.collections].sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
+    const scopedRows = selectedMethod === 'all'
+      ? selectedSchedule.collections
+      : selectedSchedule.collections.filter((row) => row.method === selectedMethod);
+    const sorted = [...scopedRows].sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
     const grouped = new Map<string, EnrichedCollectionRow[]>();
     for (const row of sorted) {
       const ts = toEpochMs(row.timestamp);
@@ -308,13 +327,25 @@ export function CollectionsPage() {
         label: dayLabel(toEpochMs(rows[0].timestamp)),
         rows,
       }));
-  }, [selectedSchedule]);
+  }, [selectedMethod, selectedSchedule]);
+
+  function escapeCsvTextCell(value: string | number): string {
+    const text = String(value ?? '');
+    const escaped = text.replace(/"/g, '""');
+
+    // Excel strips leading zeros for numeric-looking values unless forced to text.
+    if (/^0\d+$/.test(text)) {
+      return `="${escaped}"`;
+    }
+
+    return escapeCsv(text);
+  }
 
   function handleExportScheduleCsv(schedule: CollectionSchedule) {
     const csv = [
       ['Account Number', 'Customer Name', 'TSO Name', 'Amount (NGN)', 'Method', 'Status', 'Date'].join(','),
       ...schedule.collections.map((row) => [
-        escapeCsv(row.accountNumber),
+        escapeCsvTextCell(row.accountNumber),
         escapeCsv(row.customerName),
         escapeCsv(row.tsoName),
         escapeCsv(row.amount),
@@ -407,18 +438,6 @@ export function CollectionsPage() {
                     </div>
                     <div className={styles.scheduleRight}>
                       <Badge value={r.status} />
-                      <div className={styles.scheduleActions}>
-                        <button
-                          className={pageStyles.btnSmall}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleExportScheduleCsv(r);
-                          }}
-                        >
-                          Export CSV
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </article>
@@ -460,10 +479,32 @@ export function CollectionsPage() {
           ) : selectedSchedule ? (
             <>
               <div className={styles.detailHeading}>
-                <p className={pageStyles.sectionTitle}>Schedule Items</p>
-                <p className={pageStyles.sectionSub}>
-                  {selectedSchedule.tsoName} · {selectedSchedule.collections.length} collection{selectedSchedule.collections.length === 1 ? '' : 's'}
-                </p>
+                <div>
+                  <p className={pageStyles.sectionTitle}>Schedule Items</p>
+                  <p className={pageStyles.sectionSub}>
+                    {selectedSchedule.tsoName} · {selectedSchedule.collections.length} collection{selectedSchedule.collections.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+                <div className={styles.detailActions}>
+                  <select
+                    className={styles.controlInput}
+                    value={selectedMethod}
+                    onChange={(e) => setSelectedMethod(e.target.value as 'all' | Collection['method'])}
+                    aria-label="Filter by collection method"
+                  >
+                    <option value="all">All methods</option>
+                    {methodOptions.map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                  <button
+                    className={pageStyles.btnSmall}
+                    type="button"
+                    onClick={() => handleExportScheduleCsv(selectedSchedule)}
+                  >
+                    Export CSV
+                  </button>
+                </div>
               </div>
               {selectedScheduleGroups.length === 0 ? (
                 <div className={styles.emptyState}>No collections in this schedule.</div>
