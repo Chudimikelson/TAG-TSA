@@ -3,6 +3,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
 	handleCreateTso,
 	handleConfirmCollection,
+	handleConfirmCollectionsBulk,
+	handleRejectCollectionsBulk,
 	handleRejectCollection,
 	handleListTsos,
 	handleUpdateTso,
@@ -24,6 +26,7 @@ import {
 	updateAdminStatusSchema,
 	updateTsoSchema,
 	updateTsoStatusSchema,
+	confirmCollectionsBulkSchema,
 } from '../validators/admin.validators.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -63,6 +66,12 @@ adminRouter.post('/collections/:id/confirm', requireCsm, handleConfirmCollection
 
 // POST /admin/collections/:id/reject
 adminRouter.post('/collections/:id/reject', requireCsm, handleRejectCollection);
+
+// POST /admin/collections/confirm-bulk
+adminRouter.post('/collections/confirm-bulk', requireCsm, validate(confirmCollectionsBulkSchema), handleConfirmCollectionsBulk);
+
+// POST /admin/collections/reject-bulk
+adminRouter.post('/collections/reject-bulk', requireCsm, validate(confirmCollectionsBulkSchema), handleRejectCollectionsBulk);
 
 // Admin management endpoints (SuperAdmin only)
 // POST /admin/users - Create new admin

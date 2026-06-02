@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Collection } from '@tagora/shared';
-import { confirmCollection, getCollections, rejectCollection } from '../api/collections.js';
+import {
+  confirmCollection,
+  confirmCollectionsBulk,
+  getCollections,
+  rejectCollection,
+  rejectCollectionsBulk,
+} from '../api/collections.js';
 import { getMembers } from '../api/members.js';
 import { getTsos } from '../api/tsos.js';
 import { Badge } from '../components/Badge.js';
@@ -13,125 +19,19 @@ type EnrichedCollectionRow = Collection & {
   tsoName: string;
 };
 
-type ScheduleStatus = 'pending' | 'completed';
-
-interface CollectionSchedule {
-  scheduleId: string;
-  tsoId: string;
-  tsoName: string;
-  uploadedAtMs: number;
-  totalAmount: number;
-  status: ScheduleStatus;
-  collections: EnrichedCollectionRow[];
-}
-
-const SCHEDULE_GAP_MS = 2 * 60 * 1000;
-const SCHEDULES_PAGE_SIZE = 5;
+const PAGE_SIZE = 20;
 
 function toEpochMs(value: Date | string): number {
   const ts = new Date(value).getTime();
   return Number.isFinite(ts) ? ts : 0;
 }
 
-function deriveScheduleStatus(collections: EnrichedCollectionRow[]): ScheduleStatus {
-  return collections.some((row) => row.status === 'pending') ? 'pending' : 'completed';
-}
-
-function buildSchedules(rows: EnrichedCollectionRow[]): CollectionSchedule[] {
-  const byTso = new Map<string, EnrichedCollectionRow[]>();
-  for (const row of rows) {
-    const list = byTso.get(row.tsoId) ?? [];
-    list.push(row);
-    byTso.set(row.tsoId, list);
-  }
-
-  const schedules: CollectionSchedule[] = [];
-  for (const [tsoId, tsoRows] of byTso.entries()) {
-    const sorted = [...tsoRows].sort((a, b) => toEpochMs(a.timestamp) - toEpochMs(b.timestamp));
-    let bucket: EnrichedCollectionRow[] = [];
-    let bucketStartMs = 0;
-    let lastMs = 0;
-    let batchIndex = 0;
-
-    const flush = () => {
-      if (bucket.length === 0) return;
-      batchIndex += 1;
-      const totalAmount = bucket.reduce((sum, row) => sum + Number(row.amount), 0);
-      const uploadedAtMs = bucketStartMs;
-      const tsoName = bucket[0]?.tsoName ?? tsoId;
-      schedules.push({
-        scheduleId: `${tsoId}-${uploadedAtMs}-${batchIndex}`,
-        tsoId,
-        tsoName,
-        uploadedAtMs,
-        totalAmount,
-        status: deriveScheduleStatus(bucket),
-        collections: bucket,
-      });
-      bucket = [];
-      bucketStartMs = 0;
-      lastMs = 0;
-    };
-
-    for (const row of sorted) {
-      const ts = toEpochMs(row.timestamp);
-      if (bucket.length === 0) {
-        bucket = [row];
-        bucketStartMs = ts;
-        lastMs = ts;
-        continue;
-      }
-
-      if (ts - lastMs <= SCHEDULE_GAP_MS) {
-        bucket.push(row);
-        lastMs = ts;
-      } else {
-        flush();
-        bucket = [row];
-        bucketStartMs = ts;
-        lastMs = ts;
-      }
-    }
-
-    flush();
-  }
-
-  return schedules.sort((a, b) => b.uploadedAtMs - a.uploadedAtMs);
-}
-
-function escapeCsv(value: string | number): string {
-  const text = String(value ?? '');
-  if (/[",\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-
-function formatDateTime(value: number): string {
-  return new Date(value).toLocaleString('en-NG', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function toDayKey(value: number): string {
+function toIsoDay(value: number): string {
   const d = new Date(value);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-function dayLabel(value: number): string {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const rowDay = new Date(new Date(value).getFullYear(), new Date(value).getMonth(), new Date(value).getDate());
-
-  if (rowDay.getTime() === today.getTime()) return 'Today';
-  if (rowDay.getTime() === yesterday.getTime()) return 'Yesterday';
-  return rowDay.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' });
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function CollectionsPage() {
@@ -139,15 +39,19 @@ export function CollectionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copiedRowId, setCopiedRowId] = useState('');
-  const [selectedScheduleId, setSelectedScheduleId] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<'all' | Collection['method']>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest' | 'pending-first'>('newest');
-  const [schedulePage, setSchedulePage] = useState(1);
+  const [selectedTsoId, setSelectedTsoId] = useState<'all' | string>('all');
+  const [selectedMethod, setSelectedMethod] = useState<'all' | Collection['method']>('all');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'rejected'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest' | 'tso-asc' | 'tso-desc'>('newest');
+  const [page, setPage] = useState(1);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
 
   async function load() {
     setLoading(true);
     setError('');
+
     try {
       const [collectionsRes, membersRes, tsosRes] = await Promise.all([
         getCollections(),
@@ -179,20 +83,172 @@ export function CollectionsPage() {
 
       setRows(enrichedRows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      setError(err instanceof Error ? err.message : 'Failed to load collections');
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const tsoOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    rows.forEach((row) => {
+      byId.set(row.tsoId, row.tsoName);
+    });
+
+    return Array.from(byId.entries())
+      .map(([tsoId, tsoName]) => ({ tsoId, tsoName }))
+      .sort((a, b) => a.tsoName.localeCompare(b.tsoName));
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      if (selectedTsoId !== 'all' && row.tsoId !== selectedTsoId) return false;
+      if (selectedMethod !== 'all' && row.method !== selectedMethod) return false;
+      if (selectedDate && toIsoDay(toEpochMs(row.timestamp)) !== selectedDate) return false;
+      if (statusFilter !== 'all' && row.status !== statusFilter) return false;
+      if (!q) return true;
+
+      const searchable = [
+        row.collectionId,
+        row.customerName,
+        row.accountNumber,
+        row.tsoName,
+        row.memberId,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(q);
+    });
+  }, [rows, searchTerm, selectedTsoId, selectedMethod, selectedDate, statusFilter]);
+
+  const visibleRows = useMemo(() => {
+    const next = [...filteredRows];
+
+    switch (sortBy) {
+      case 'oldest':
+        next.sort((a, b) => toEpochMs(a.timestamp) - toEpochMs(b.timestamp));
+        break;
+      case 'highest':
+        next.sort((a, b) => b.amount - a.amount);
+        break;
+      case 'lowest':
+        next.sort((a, b) => a.amount - b.amount);
+        break;
+      case 'tso-asc':
+        next.sort((a, b) => a.tsoName.localeCompare(b.tsoName));
+        break;
+      case 'tso-desc':
+        next.sort((a, b) => b.tsoName.localeCompare(a.tsoName));
+        break;
+      default:
+        next.sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
+        break;
+    }
+
+    return next;
+  }, [filteredRows, sortBy]);
+
+  const summary = useMemo(() => {
+    const methodTotals = {
+      cash: 0,
+      tsa: 0,
+      tagora_pool: 0,
+    };
+
+    const statusTotals = {
+      pending: 0,
+      confirmed: 0,
+      rejected: 0,
+    };
+
+    let totalAmount = 0;
+    let newestTs = 0;
+    let oldestTs = Number.MAX_SAFE_INTEGER;
+    const byTso = new Map<string, { tsoName: string; count: number; amount: number }>();
+
+    for (const row of visibleRows) {
+      totalAmount += Number(row.amount) || 0;
+      methodTotals[row.method] += Number(row.amount) || 0;
+
+      if (row.status === 'pending' || row.status === 'confirmed' || row.status === 'rejected') {
+        statusTotals[row.status] += 1;
+      }
+
+      const ts = toEpochMs(row.timestamp);
+      if (ts > newestTs) newestTs = ts;
+      if (ts < oldestTs) oldestTs = ts;
+
+      const prev = byTso.get(row.tsoId) ?? { tsoName: row.tsoName, count: 0, amount: 0 };
+      prev.count += 1;
+      prev.amount += Number(row.amount) || 0;
+      byTso.set(row.tsoId, prev);
+    }
+
+    const topTsos = Array.from(byTso.values())
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    return {
+      count: visibleRows.length,
+      totalAmount,
+      statusTotals,
+      methodTotals,
+      newestTs,
+      oldestTs: oldestTs === Number.MAX_SAFE_INTEGER ? 0 : oldestTs,
+      topTsos,
+    };
+  }, [visibleRows]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+
+  useEffect(() => {
+    if (page <= totalPages) return;
+    setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedTsoId, selectedMethod, selectedDate, statusFilter, sortBy]);
+
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return visibleRows.slice(start, start + PAGE_SIZE);
+  }, [page, visibleRows]);
+
+  useEffect(() => {
+    const knownIds = new Set(rows.map((row) => row.collectionId));
+    setSelectedCollectionIds((prev) => prev.filter((id) => knownIds.has(id)));
+  }, [rows]);
+
+  const pendingVisibleIds = useMemo(
+    () => visibleRows.filter((row) => row.status === 'pending').map((row) => row.collectionId),
+    [visibleRows],
+  );
+
+  const selectedPendingIds = useMemo(() => {
+    const pendingSet = new Set(pendingVisibleIds);
+    return selectedCollectionIds.filter((id) => pendingSet.has(id));
+  }, [pendingVisibleIds, selectedCollectionIds]);
+
+  const allPendingSelected = useMemo(() => {
+    if (pendingVisibleIds.length === 0) return false;
+    const selectedSet = new Set(selectedCollectionIds);
+    return pendingVisibleIds.every((id) => selectedSet.has(id));
+  }, [pendingVisibleIds, selectedCollectionIds]);
 
   async function handleConfirm(id: string) {
     try {
       await confirmCollection(id);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error');
+      alert(err instanceof Error ? err.message : 'Failed to confirm collection');
     }
   }
 
@@ -201,7 +257,39 @@ export function CollectionsPage() {
       await rejectCollection(id);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error');
+      alert(err instanceof Error ? err.message : 'Failed to reject collection');
+    }
+  }
+
+  async function handleBulkConfirm() {
+    if (selectedPendingIds.length === 0) {
+      alert('Select at least one pending record to confirm.');
+      return;
+    }
+
+    try {
+      const result = await confirmCollectionsBulk(selectedPendingIds);
+      await load();
+      setSelectedCollectionIds([]);
+      alert(`Confirmed ${result.data.processedCount} record${result.data.processedCount === 1 ? '' : 's'}.`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Bulk confirm failed');
+    }
+  }
+
+  async function handleBulkReject() {
+    if (selectedPendingIds.length === 0) {
+      alert('Select at least one pending record to reject.');
+      return;
+    }
+
+    try {
+      const result = await rejectCollectionsBulk(selectedPendingIds);
+      await load();
+      setSelectedCollectionIds([]);
+      alert(`Rejected ${result.data.processedCount} record${result.data.processedCount === 1 ? '' : 's'}.`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Bulk reject failed');
     }
   }
 
@@ -215,354 +303,257 @@ export function CollectionsPage() {
     }
   }
 
-  const filteredRows = useMemo(() => {
-    return [...rows].sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
-  }, [rows]);
-
-  const schedules = useMemo(() => buildSchedules(filteredRows), [filteredRows]);
-
-  const visibleSchedules = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    let next = [...schedules];
-
-    if (q) {
-      next = next.filter((schedule) => {
-        const ref = schedule.scheduleId.slice(-10).toLowerCase();
-        return schedule.tsoName.toLowerCase().includes(q) || ref.includes(q);
-      });
-    }
-
-    switch (sortBy) {
-      case 'oldest':
-        next.sort((a, b) => a.uploadedAtMs - b.uploadedAtMs);
-        break;
-      case 'highest':
-        next.sort((a, b) => b.totalAmount - a.totalAmount);
-        break;
-      case 'lowest':
-        next.sort((a, b) => a.totalAmount - b.totalAmount);
-        break;
-      case 'pending-first':
-        next.sort((a, b) => {
-          if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
-          return b.uploadedAtMs - a.uploadedAtMs;
-        });
-        break;
-      default:
-        next.sort((a, b) => b.uploadedAtMs - a.uploadedAtMs);
-        break;
-    }
-
-    return next;
-  }, [schedules, searchTerm, sortBy]);
-
-  const totalSchedulePages = Math.max(1, Math.ceil(visibleSchedules.length / SCHEDULES_PAGE_SIZE));
-
-  useEffect(() => {
-    if (schedulePage <= totalSchedulePages) return;
-    setSchedulePage(totalSchedulePages);
-  }, [schedulePage, totalSchedulePages]);
-
-  useEffect(() => {
-    setSchedulePage(1);
-  }, [searchTerm, sortBy]);
-
-  const pagedSchedules = useMemo(() => {
-    const start = (schedulePage - 1) * SCHEDULES_PAGE_SIZE;
-    return visibleSchedules.slice(start, start + SCHEDULES_PAGE_SIZE);
-  }, [schedulePage, visibleSchedules]);
-
-  const selectedSchedule = useMemo(
-    () => schedules.find((schedule) => schedule.scheduleId === selectedScheduleId),
-    [schedules, selectedScheduleId],
-  );
-
-  const methodOptions = useMemo(() => {
-    if (!selectedSchedule) return [] as Collection['method'][];
-    return Array.from(new Set(selectedSchedule.collections.map((row) => row.method))).sort();
-  }, [selectedSchedule]);
-
-  useEffect(() => {
-    if (!selectedScheduleId) return;
-    if (!selectedSchedule) {
-      setSelectedScheduleId('');
-    }
-  }, [selectedSchedule, selectedScheduleId]);
-
-  useEffect(() => {
-    if (selectedScheduleId) return;
-    if (pagedSchedules.length === 0) return;
-    setSelectedScheduleId(pagedSchedules[0].scheduleId);
-  }, [pagedSchedules, selectedScheduleId]);
-
-  useEffect(() => {
-    if (selectedMethod === 'all') return;
-    if (methodOptions.includes(selectedMethod)) return;
-    setSelectedMethod('all');
-  }, [methodOptions, selectedMethod]);
-
-  useEffect(() => {
-    setSelectedMethod('all');
-  }, [selectedScheduleId]);
-
-  const selectedScheduleGroups = useMemo(() => {
-    if (!selectedSchedule) return [] as Array<{ key: string; label: string; rows: EnrichedCollectionRow[] }>;
-    const scopedRows = selectedMethod === 'all'
-      ? selectedSchedule.collections
-      : selectedSchedule.collections.filter((row) => row.method === selectedMethod);
-    const sorted = [...scopedRows].sort((a, b) => toEpochMs(b.timestamp) - toEpochMs(a.timestamp));
-    const grouped = new Map<string, EnrichedCollectionRow[]>();
-    for (const row of sorted) {
-      const ts = toEpochMs(row.timestamp);
-      const key = toDayKey(ts);
-      const list = grouped.get(key) ?? [];
-      list.push(row);
-      grouped.set(key, list);
-    }
-
-    return Array.from(grouped.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
-      .map(([key, rows]) => ({
-        key,
-        label: dayLabel(toEpochMs(rows[0].timestamp)),
-        rows,
-      }));
-  }, [selectedMethod, selectedSchedule]);
-
-  function escapeCsvTextCell(value: string | number): string {
-    const text = String(value ?? '');
-    const escaped = text.replace(/"/g, '""');
-
-    // Excel strips leading zeros for numeric-looking values unless forced to text.
-    if (/^0\d+$/.test(text)) {
-      return `="${escaped}"`;
-    }
-
-    return escapeCsv(text);
+  function toggleCollectionSelection(collectionId: string) {
+    setSelectedCollectionIds((prev) => (
+      prev.includes(collectionId)
+        ? prev.filter((id) => id !== collectionId)
+        : [...prev, collectionId]
+    ));
   }
 
-  function handleExportScheduleCsv(schedule: CollectionSchedule) {
-    const csv = [
-      ['Account Number', 'Customer Name', 'TSO Name', 'Amount (NGN)', 'Method', 'Status', 'Date'].join(','),
-      ...schedule.collections.map((row) => [
-        escapeCsvTextCell(row.accountNumber),
-        escapeCsv(row.customerName),
-        escapeCsv(row.tsoName),
-        escapeCsv(row.amount),
-        escapeCsv(row.method),
-        escapeCsv(row.status),
-        escapeCsv(new Date(row.timestamp).toLocaleDateString('en-NG')),
-      ].join(',')),
-    ].join('\n');
+  function toggleSelectAllPending() {
+    if (allPendingSelected) {
+      const pendingSet = new Set(pendingVisibleIds);
+      setSelectedCollectionIds((prev) => prev.filter((id) => !pendingSet.has(id)));
+      return;
+    }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `collection-schedule-${schedule.scheduleId}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setSelectedCollectionIds((prev) => Array.from(new Set([...prev, ...pendingVisibleIds])));
   }
 
   return (
     <div className={styles.page}>
-      <h1 className={`${pageStyles.heading} ${styles.pageHeading}`}>Collection Schedules</h1>
       {error && <p className={pageStyles.error}>{error}</p>}
 
       <section className={styles.splitView}>
-        <article className={styles.schedulePanel}>
+        <article className={styles.panel}>
           <div className={styles.panelHeader}>
             <div className={styles.panelControls}>
-              <input
-                className={styles.controlInput}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by TSO or schedule ref"
-                aria-label="Search schedules"
-              />
-              <select
-                className={styles.controlInput}
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest' | 'pending-first')}
-                aria-label="Sort schedules"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="highest">Highest Amount</option>
-                <option value="lowest">Lowest Amount</option>
-                <option value="pending-first">Pending First</option>
-              </select>
-              <button className={pageStyles.btnSmall} type="button" onClick={() => void load()}>
-                Refresh
-              </button>
-            </div>
+          <input
+            className={styles.controlInput}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by customer, account, TSO or collection ID"
+            aria-label="Search collection records"
+          />
+
+          <select
+            className={styles.controlInput}
+            value={selectedTsoId}
+            onChange={(e) => setSelectedTsoId(e.target.value)}
+            aria-label="Filter by TSO"
+          >
+            <option value="all">All TSOs</option>
+            {tsoOptions.map((tso) => (
+              <option key={tso.tsoId} value={tso.tsoId}>{tso.tsoName}</option>
+            ))}
+          </select>
+
+          <select
+            className={styles.controlInput}
+            value={selectedMethod}
+            onChange={(e) => setSelectedMethod(e.target.value as 'all' | Collection['method'])}
+            aria-label="Filter by method"
+          >
+            <option value="all">All methods</option>
+            <option value="cash">Cash</option>
+            <option value="tsa">Transfer (TSA)</option>
+            <option value="tagora_pool">Transfer (Tagora-Pool)</option>
+          </select>
+
+          <input
+            className={styles.controlInput}
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            aria-label="Filter by collection date"
+          />
+
+          <select
+            className={styles.controlInput}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'confirmed' | 'rejected')}
+            aria-label="Filter by status"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+
+          <select
+            className={styles.controlInput}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest' | 'tso-asc' | 'tso-desc')}
+            aria-label="Sort records"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="highest">Highest Amount</option>
+            <option value="lowest">Lowest Amount</option>
+            <option value="tso-asc">TSO (A-Z)</option>
+            <option value="tso-desc">TSO (Z-A)</option>
+          </select>
+
+            <button className={pageStyles.btnSmall} type="button" onClick={() => void load()}>
+              Refresh
+            </button>
           </div>
 
-          {loading ? (
-            <div className={styles.scheduleCardList}>
-              {[0, 1, 2, 3].map((idx) => (
-                <article key={idx} className={`${styles.scheduleCard} ${styles.skeletonPulse}`}>
-                  <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
-                  <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-                  <div className={`${styles.skeletonBlock} ${styles.skeletonTiny}`} />
-                </article>
-              ))}
-            </div>
-          ) : visibleSchedules.length === 0 ? (
-            <div className={styles.emptyState}>No schedules found for this filter.</div>
-          ) : (
-            <div className={styles.scheduleCardList}>
-              {pagedSchedules.map((r, idx) => (
-                <article
-                  key={r.scheduleId}
-                  className={`${styles.scheduleCard} ${selectedScheduleId === r.scheduleId ? styles.scheduleCardActive : ''}`}
-                  style={{ animationDelay: `${idx * 35}ms` }}
-                  onClick={() => setSelectedScheduleId(r.scheduleId)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedScheduleId(r.scheduleId);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className={styles.scheduleMain}>
-                    <div className={styles.scheduleLeft}>
-                      <p className={styles.scheduleTitle}>{r.tsoName}</p>
-                      <p className={styles.scheduleAmount}>₦{r.totalAmount.toLocaleString()}</p>
-                      <p className={styles.scheduleSub}>{formatDateTime(r.uploadedAtMs)}</p>
-                    </div>
-                    <div className={styles.scheduleRight}>
-                      <Badge value={r.status} />
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+          <div className={styles.bulkRow}>
+            <label className={styles.bulkSelectLabel}>
+              <input
+                type="checkbox"
+                checked={allPendingSelected}
+                onChange={toggleSelectAllPending}
+                disabled={pendingVisibleIds.length === 0}
+              />
+              Select all pending ({pendingVisibleIds.length})
+            </label>
 
-          {!loading && visibleSchedules.length > 0 && (
-            <div className={styles.paginationRow}>
-              <button
-                className={pageStyles.btnSmall}
-                type="button"
-                onClick={() => setSchedulePage((p) => Math.max(1, p - 1))}
-                disabled={schedulePage <= 1}
-              >
-                Previous
-              </button>
-              <span className={styles.pageInfo}>Page {schedulePage} of {totalSchedulePages}</span>
-              <button
-                className={pageStyles.btnSmall}
-                type="button"
-                onClick={() => setSchedulePage((p) => Math.min(totalSchedulePages, p + 1))}
-                disabled={schedulePage >= totalSchedulePages}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </article>
+            <span className={styles.bulkHint}>Selected pending: {selectedPendingIds.length}</span>
 
-        <section className={styles.detailShell}>
-          {loading ? (
-            <>
-              <div className={`${styles.skeletonBlock} ${styles.skeletonLarge}`} />
-              {[0, 1].map((idx) => (
-                <div key={idx} className={`${styles.skeletonBlock} ${styles.skeletonMedium}`} />
-              ))}
-            </>
-          ) : selectedSchedule ? (
-            <>
-              <div className={styles.detailHeading}>
-                <div>
-                  <p className={pageStyles.sectionTitle}>Schedule Items</p>
-                  <p className={pageStyles.sectionSub}>
-                    {selectedSchedule.tsoName} · {selectedSchedule.collections.length} collection{selectedSchedule.collections.length === 1 ? '' : 's'}
-                  </p>
-                </div>
-                <div className={styles.detailActions}>
-                  <select
-                    className={styles.controlInput}
-                    value={selectedMethod}
-                    onChange={(e) => setSelectedMethod(e.target.value as 'all' | Collection['method'])}
-                    aria-label="Filter by collection method"
-                  >
-                    <option value="all">All methods</option>
-                    {methodOptions.map((method) => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
-                  </select>
-                  <button
-                    className={pageStyles.btnSmall}
-                    type="button"
-                    onClick={() => handleExportScheduleCsv(selectedSchedule)}
-                  >
-                    Export CSV
-                  </button>
-                </div>
+            <button
+              className={pageStyles.btnSuccess}
+              type="button"
+              onClick={() => void handleBulkConfirm()}
+              disabled={selectedPendingIds.length === 0}
+            >
+              Confirm Selected
+            </button>
+
+            <button
+              className={pageStyles.btnDanger}
+              type="button"
+              onClick={() => void handleBulkReject()}
+              disabled={selectedPendingIds.length === 0}
+            >
+              Reject Selected
+            </button>
+          </div>
+          </div>
+        {loading ? (
+          <div className={styles.tableLoading}>
+            {[0, 1, 2, 3, 4].map((idx) => (
+              <div key={idx} className={styles.tableLoadingRow}>
+                <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
               </div>
-              {selectedScheduleGroups.length === 0 ? (
-                <div className={styles.emptyState}>No collections in this schedule.</div>
-              ) : (
-                selectedScheduleGroups.map((group, groupIndex) => (
-                  <section key={group.key} className={styles.groupSection} style={{ animationDelay: `${groupIndex * 35}ms` }}>
-                    <div className={styles.groupHeading}>{group.label}</div>
-                    <div className={styles.groupList}>
-                      {group.rows.map((r, rowIndex) => (
-                        <article
-                          key={r.collectionId}
-                          className={styles.collectionCard}
-                          style={{ animationDelay: `${rowIndex * 30}ms` }}
-                        >
-                          <div className={styles.collectionTop}>
-                            <div>
-                              <p className={styles.customerName}>{r.customerName}</p>
-                              <p className={styles.mutedLine}>{r.tsoName} · {formatDateTime(toEpochMs(r.timestamp))}</p>
-                            </div>
-                            <div className={styles.collectionRight}>
-                              <p className={styles.amount}>₦{r.amount.toLocaleString()}</p>
-                              <Badge value={r.status} />
-                            </div>
-                          </div>
-                          <div className={styles.collectionBottom}>
-                            <span className={styles.accountNumber}>{r.accountNumber}</span>
-                            <button
-                              type="button"
-                              className={pageStyles.btnSmall}
-                              onClick={() => handleCopyAccount(r.accountNumber, r.collectionId)}
-                              title="Copy account number"
-                              aria-label="Copy account number"
-                            >
-                              {copiedRowId === r.collectionId ? 'Copied' : 'Copy Acct'}
-                            </button>
-                            <span className={styles.methodChip}>{r.method}</span>
-                            {r.status === 'pending' && (
-                              <span className={styles.actionRow}>
-                                <button className={pageStyles.btnSuccess} onClick={() => handleConfirm(r.collectionId)}>
-                                  Confirm
-                                </button>
-                                <button className={pageStyles.btnDanger} onClick={() => handleReject(r.collectionId)}>
-                                  Reject
-                                </button>
-                              </span>
-                            )}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                ))
-              )}
-            </>
-          ) : (
-            <div className={styles.emptyState}>Select a schedule to review collections.</div>
-          )}
-        </section>
+            ))}
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className={styles.emptyState}>No collection records found for this filter.</div>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.colSelect}>Select</th>
+                  <th>Customer</th>
+                  <th className={styles.colAmount}>Amount</th>
+                  <th>Method</th>
+                  <th>TSO</th>
+                  <th>Date/Time</th>
+                  <th>Status</th>
+                  <th className={styles.colActions}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedRows.map((row) => (
+                  <tr key={row.collectionId}>
+                    <td>
+                      {row.status === 'pending' ? (
+                        <input
+                          type="checkbox"
+                          className={styles.rowSelectBox}
+                          checked={selectedCollectionIds.includes(row.collectionId)}
+                          onChange={() => toggleCollectionSelection(row.collectionId)}
+                          aria-label={`Select collection for ${row.customerName}`}
+                        />
+                      ) : (
+                        <span className={styles.selectSpacer} aria-hidden="true" />
+                      )}
+                    </td>
+
+                    <td>
+                      <div className={styles.customerCell}>
+                        <p className={styles.customerName}>{row.customerName}</p>
+                        <span className={styles.customerMeta}>
+                          <span className={styles.rowSubtle}>{row.accountNumber}</span>
+                          <button
+                            type="button"
+                            className={styles.copyIconBtn}
+                            onClick={() => void handleCopyAccount(row.accountNumber, row.collectionId)}
+                            title="Copy account number"
+                            aria-label="Copy account number"
+                          >
+                            {copiedRowId === row.collectionId ? '✓' : '⧉'}
+                          </button>
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className={styles.colAmount}>
+                      <span className={styles.amountValue}>₦{row.amount.toLocaleString()}</span>
+                    </td>
+
+                    <td>
+                      <span className={styles.methodChip}>{row.method}</span>
+                    </td>
+
+                    <td>{row.tsoName}</td>
+
+                    <td>
+                      <span className={styles.rowSubtle}>{new Date(row.timestamp).toLocaleString('en-NG')}</span>
+                    </td>
+
+                    <td>
+                      <Badge value={row.status} />
+                    </td>
+
+                    <td className={styles.colActions}>
+                      {row.status === 'pending' ? (
+                        <span className={styles.actionRow}>
+                          <button className={pageStyles.btnSuccess} onClick={() => void handleConfirm(row.collectionId)}>
+                            Confirm
+                          </button>
+                          <button className={pageStyles.btnDanger} onClick={() => void handleReject(row.collectionId)}>
+                            Reject
+                          </button>
+                        </span>
+                      ) : (
+                        <span className={styles.rowSubtle}>No actions</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && visibleRows.length > 0 && (
+          <div className={styles.paginationRow}>
+            <button
+              className={pageStyles.btnSmall}
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Previous
+            </button>
+            <span className={styles.pageInfo}>Page {page} of {totalPages}</span>
+            <button
+              className={pageStyles.btnSmall}
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
+        </article>
       </section>
     </div>
   );

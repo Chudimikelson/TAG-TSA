@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import {
   createTsoByAdmin,
   reviewCollection,
+  reviewCollectionsBulk,
   listTsos,
   updateTso,
   updateTsoStatus,
@@ -20,6 +21,7 @@ import {
   UpdateAdminStatusBody,
   UpdateTsoBody,
   UpdateTsoStatusBody,
+  ConfirmCollectionsBulkBody,
 } from '../validators/admin.validators.js';
 
 export async function handleConfirmCollection(
@@ -43,6 +45,32 @@ export async function handleRejectCollection(
   try {
     const collection = await reviewCollection(req.params.id, 'rejected', req.actor!.sub);
     res.json({ success: true, data: collection });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleConfirmCollectionsBulk(
+  req: Request<object, object, ConfirmCollectionsBulkBody>,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await reviewCollectionsBulk(req.body.collectionIds, 'confirmed', req.actor!.sub);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleRejectCollectionsBulk(
+  req: Request<object, object, ConfirmCollectionsBulkBody>,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await reviewCollectionsBulk(req.body.collectionIds, 'rejected', req.actor!.sub);
+    res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

@@ -41,6 +41,16 @@ export function WithdrawalsPage() {
           + New Request
         </button>
       }
+      mobileAction={(
+        <button
+          type="button"
+          className="mobile-record-btn"
+          onClick={() => navigate('/withdrawals/new')}
+          aria-label="Request withdrawal"
+        >
+          + Request
+        </button>
+      )}
     >
       {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}

@@ -82,6 +82,10 @@ export const updateTsoSchema = z
     message: 'At least one field is required',
   });
 
+export const confirmCollectionsBulkSchema = z.object({
+  collectionIds: z.array(z.string().min(1).trim()).min(1).max(500),
+});
+
 export type CreateTsoByAdminBody = z.infer<typeof createTsoByAdminSchema>;
 export type CreateAdminBody = z.infer<typeof createAdminSchema>;
 export type UpdateAdminRoleBody = z.infer<typeof updateAdminRoleSchema>;
@@ -89,3 +93,4 @@ export type UpdateAdminStatusBody = z.infer<typeof updateAdminStatusSchema>;
 export type UpdateAdminBody = z.infer<typeof updateAdminSchema>;
 export type UpdateTsoStatusBody = z.infer<typeof updateTsoStatusSchema>;
 export type UpdateTsoBody = z.infer<typeof updateTsoSchema>;
+export type ConfirmCollectionsBulkBody = z.infer<typeof confirmCollectionsBulkSchema>;

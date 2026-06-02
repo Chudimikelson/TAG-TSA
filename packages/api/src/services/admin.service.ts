@@ -24,6 +24,13 @@ function hashPassword(password: string): string {
 
 export type ReviewCollectionDecision = 'confirmed' | 'rejected';
 
+export interface BulkCollectionReviewResult {
+  requestedCount: number;
+  processedCount: number;
+  decision: ReviewCollectionDecision;
+  skipped: Array<{ collectionId: string; reason: 'not_found' | 'not_pending' | 'member_not_found' }>;
+}
+
 export async function reviewCollection(
   collectionId: string,
   decision: ReviewCollectionDecision,
@@ -61,6 +68,62 @@ export async function reviewCollection(
   });
 
   return collection;
+}
+
+export async function reviewCollectionsBulk(
+  collectionIds: string[],
+  decision: ReviewCollectionDecision,
+  adminId: string,
+): Promise<BulkCollectionReviewResult> {
+  const dedupedIds = Array.from(new Set(collectionIds));
+  const collections = await CollectionModel.find({ collectionId: { $in: dedupedIds } });
+  const byId = new Map(collections.map((c) => [c.collectionId, c]));
+
+  const skipped: Array<{ collectionId: string; reason: 'not_found' | 'not_pending' | 'member_not_found' }> = [];
+  let processedCount = 0;
+
+  for (const collectionId of dedupedIds) {
+    const collection = byId.get(collectionId);
+    if (!collection) {
+      skipped.push({ collectionId, reason: 'not_found' });
+      continue;
+    }
+
+    if (collection.status !== 'pending') {
+      skipped.push({ collectionId, reason: 'not_pending' });
+      continue;
+    }
+
+    if (decision === 'confirmed') {
+      const memberUpdate = await MemberModel.updateOne(
+        { memberId: collection.memberId },
+        { $inc: { savingsBalance: collection.amount } },
+      );
+
+      if (!memberUpdate.matchedCount) {
+        skipped.push({ collectionId, reason: 'member_not_found' });
+        continue;
+      }
+    }
+
+    collection.status = decision;
+    await collection.save();
+    processedCount += 1;
+
+    await AuditLogModel.create({
+      logId: randomUUID(),
+      actorId: adminId,
+      action: decision === 'confirmed' ? 'collection_confirmed' : 'collection_rejected',
+      targetId: collectionId,
+    });
+  }
+
+  return {
+    requestedCount: dedupedIds.length,
+    processedCount,
+    decision,
+    skipped,
+  };
 }
 
 export async function createTsoByAdmin(input: CreateTsoByAdminBody, adminId: string) {
