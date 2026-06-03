@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { WithdrawalRequest } from '@tagora/shared';
 import {
-  approveWithdrawal,
   getWithdrawals,
-  rejectWithdrawal,
 } from '../api/withdrawals.js';
 import { getMembers } from '../api/members.js';
 import { getTsos } from '../api/tsos.js';
-import { Badge } from '../components/Badge.js';
 import { Table } from '../components/Table.js';
 import styles from './Page.module.css';
 
-type WithdrawalStatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'disbursed';
 type WithdrawalMethodFilter = 'all' | 'bank_transfer' | 'cash' | 'mobile_money';
 
 type EnrichedWithdrawalRow = WithdrawalRequest & {
@@ -24,10 +20,8 @@ export function WithdrawalsPage() {
   const [rows, setRows] = useState<EnrichedWithdrawalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [processingId, setProcessingId] = useState('');
+  const [notice] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<WithdrawalStatusFilter>('all');
   const [methodFilter, setMethodFilter] = useState<WithdrawalMethodFilter>('all');
 
   async function load() {
@@ -72,53 +66,11 @@ export function WithdrawalsPage() {
 
   useEffect(() => { void load(); }, []);
 
-  async function handleApprove(id: string) {
-    if (processingId) return;
-    try {
-      setNotice('');
-      setProcessingId(id);
-      await approveWithdrawal(id);
-      await load();
-      setNotice('Withdrawal approved successfully.');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error');
-    } finally {
-      setProcessingId('');
-    }
-  }
-
-  async function handleReject(id: string) {
-    if (!confirm('Reject this withdrawal request?')) return;
-    if (processingId) return;
-    try {
-      setNotice('');
-      setProcessingId(id);
-      await rejectWithdrawal(id);
-      await load();
-      setNotice('Withdrawal rejected successfully.');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error');
-    } finally {
-      setProcessingId('');
-    }
-  }
-
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    const statusRank: Record<string, number> = {
-      pending: 0,
-      approved: 1,
-      rejected: 1,
-      disbursed: 2,
-    };
-
     return rows
       .filter((row) => {
-        if (statusFilter !== 'all' && row.status !== statusFilter) {
-          return false;
-        }
-
         if (methodFilter !== 'all' && row.disbursementMethod !== methodFilter) {
           return false;
         }
@@ -140,14 +92,8 @@ export function WithdrawalsPage() {
 
         return haystack.includes(query);
       })
-      .sort((a, b) => {
-        const byStatus = (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3);
-        if (byStatus !== 0) {
-          return byStatus;
-        }
-        return Number(new Date(b.requestedAt)) - Number(new Date(a.requestedAt));
-      });
-  }, [methodFilter, rows, search, statusFilter]);
+      .sort((a, b) => Number(new Date(b.requestedAt)) - Number(new Date(a.requestedAt)));
+  }, [methodFilter, rows, search]);
 
   const summary = useMemo(() => {
     const totalAmount = rows.reduce((sum, row) => sum + Number(row.amount), 0);
@@ -222,21 +168,6 @@ export function WithdrawalsPage() {
           </label>
 
           <label className={styles.label}>
-            <span>Status</span>
-            <select
-              className={styles.input}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as WithdrawalStatusFilter)}
-            >
-              <option value="all">All statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="disbursed">Disbursed</option>
-            </select>
-          </label>
-
-          <label className={styles.label}>
             <span>Method</span>
             <select
               className={styles.input}
@@ -288,36 +219,8 @@ export function WithdrawalsPage() {
               render: (r) => r.disbursementMethod.replace(/_/g, ' '),
             },
             {
-              header: 'Status',
-              render: (r) => <Badge value={r.status} />,
-            },
-            {
               header: 'Requested By',
               render: (r) => r.requesterName,
-            },
-            {
-              header: 'Actions',
-              render: (r) =>
-                r.status === 'pending' ? (
-                  <span className={styles.row}>
-                    <button
-                      className={styles.btnSuccess}
-                      disabled={processingId === r.withdrawalId}
-                      onClick={() => handleApprove(r.withdrawalId)}
-                    >
-                      {processingId === r.withdrawalId ? 'Processing…' : 'Approve'}
-                    </button>
-                    <button
-                      className={styles.btnDanger}
-                      disabled={processingId === r.withdrawalId}
-                      onClick={() => handleReject(r.withdrawalId)}
-                    >
-                      Reject
-                    </button>
-                  </span>
-                ) : (
-                  '—'
-                ),
             },
           ]}
         />

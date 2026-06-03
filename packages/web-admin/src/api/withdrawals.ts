@@ -9,17 +9,3 @@ export interface WithdrawalListResponse {
 export function getWithdrawals(): Promise<WithdrawalListResponse> {
   return request<WithdrawalListResponse>('/withdrawals');
 }
-
-export function approveWithdrawal(withdrawalId: string): Promise<unknown> {
-  return request(`/withdrawals/${withdrawalId}/review`, {
-    method: 'POST',
-    body: JSON.stringify({ decision: 'approved' }),
-  });
-}
-
-export function rejectWithdrawal(withdrawalId: string): Promise<unknown> {
-  return request(`/withdrawals/${withdrawalId}/review`, {
-    method: 'POST',
-    body: JSON.stringify({ decision: 'rejected' }),
-  });
-}

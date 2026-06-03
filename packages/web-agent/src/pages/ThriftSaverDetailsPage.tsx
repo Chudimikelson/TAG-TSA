@@ -105,6 +105,7 @@ export function ThriftSaverDetailsPage() {
 
         setStatementEntries(
           [...memberCollections, ...memberWithdrawals]
+            .filter((entry) => entry.status !== 'rejected')
             .sort((a, b) => Number(b.timestamp) - Number(a.timestamp)),
         );
       } catch (e) {

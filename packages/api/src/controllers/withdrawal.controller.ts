@@ -1,15 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   createWithdrawalSchema,
-  reviewWithdrawalSchema,
   CreateWithdrawalBody,
-  ReviewWithdrawalBody,
 } from '../validators/withdrawal.validators.js';
 import {
   createWithdrawal,
   getWithdrawal,
   listWithdrawals,
-  reviewWithdrawal,
 } from '../services/withdrawal.service.js';
 
 export async function handleCreateWithdrawal(
@@ -56,16 +53,3 @@ export async function handleGetWithdrawal(
   }
 }
 
-export async function handleReviewWithdrawal(
-  req: Request<{ id: string }, object, ReviewWithdrawalBody>,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const body = reviewWithdrawalSchema.parse(req.body);
-    const withdrawal = await reviewWithdrawal(req.params.id, body, req.actor!.sub);
-    res.json({ success: true, data: withdrawal });
-  } catch (err) {
-    next(err);
-  }
-}

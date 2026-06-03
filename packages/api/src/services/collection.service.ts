@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CollectionModel, CollectionDocument } from '../models/Collection.js';
+import { MemberModel } from '../models/Member.js';
 import { uploadReceiptImage } from './storage.service.js';
 import { audit } from './audit.service.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -41,6 +42,14 @@ export async function createCollection(
 
   const collectionId = uuidv4();
 
+  const memberUpdate = await MemberModel.updateOne(
+    { memberId: input.memberId },
+    { $inc: { savingsBalance: input.amount } },
+  );
+  if (!memberUpdate.matchedCount) {
+    throw new AppError(404, 'Member not found for this collection');
+  }
+
   const collection = await CollectionModel.create({
     collectionId,
     planId: input.planId,
@@ -51,7 +60,7 @@ export async function createCollection(
     timestamp: input.timestamp,
     photoReceiptUrl,
     geo: input.geo,
-    status: 'pending',
+    status: 'confirmed',
     idempotencyKey: input.idempotencyKey,
   });
 

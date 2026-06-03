@@ -4,7 +4,7 @@ import { MemberModel } from '../models/Member.js';
 import { SavingsPlanModel } from '../models/SavingsPlan.js';
 import { audit } from './audit.service.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { CreateWithdrawalBody, ReviewWithdrawalBody } from '../validators/withdrawal.validators.js';
+import { CreateWithdrawalBody } from '../validators/withdrawal.validators.js';
 
 // ---------------------------------------------------------------------------
 // Create withdrawal request (TSO on behalf of member)
@@ -37,15 +37,6 @@ export async function createWithdrawal(
     throw new AppError(409, 'Withdrawal can only be requested for an active plan');
   }
 
-  // Guard: no duplicate pending withdrawal for the same plan
-  const existing = await WithdrawalRequestModel.findOne({
-    planId: input.planId,
-    status: 'pending',
-  });
-  if (existing) {
-    throw new AppError(409, 'A pending withdrawal already exists for this plan');
-  }
-
   const withdrawalId = uuidv4();
 
   const withdrawal = await WithdrawalRequestModel.create({
@@ -55,8 +46,10 @@ export async function createWithdrawal(
     planId: input.planId,
     amount: input.amount,
     requestedAt: new Date(),
+    approvedBy: tsoId,
+    approvedAt: new Date(),
     disbursementMethod: input.disbursementMethod,
-    status: 'pending',
+    status: 'approved',
   });
 
   await audit({
@@ -112,42 +105,3 @@ export async function getWithdrawal(
   return withdrawal;
 }
 
-// ---------------------------------------------------------------------------
-// Approve or reject (admin only)
-// ---------------------------------------------------------------------------
-
-export async function reviewWithdrawal(
-  withdrawalId: string,
-  input: ReviewWithdrawalBody,
-  adminId: string,
-): Promise<WithdrawalRequestDocument> {
-  const withdrawal = await WithdrawalRequestModel.findOne({ withdrawalId });
-  if (!withdrawal) {
-    throw new AppError(404, 'Withdrawal not found');
-  }
-
-  if (withdrawal.status !== 'pending') {
-    throw new AppError(409, `Cannot review a withdrawal that is already '${withdrawal.status}'`);
-  }
-
-  withdrawal.status = input.decision;
-  withdrawal.approvedBy = adminId;
-  withdrawal.approvedAt = new Date();
-  await withdrawal.save();
-
-  await audit({
-    actorId: adminId,
-    action: `withdrawal.${input.decision}`,
-    targetId: withdrawalId,
-    metadata: { decision: input.decision },
-  });
-
-  if (input.decision === 'rejected') {
-    await MemberModel.updateOne(
-      { memberId: withdrawal.memberId },
-      { $inc: { savingsBalance: withdrawal.amount } },
-    );
-  }
-
-  return withdrawal;
-}

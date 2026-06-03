@@ -9,6 +9,25 @@ type CollectionStatus = 'pending' | 'confirmed' | 'rejected' | 'matched' | 'flag
 type CollectionStatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 type CollectionMethodFilter = 'all' | 'cash' | 'tsa' | 'tagora_pool';
 
+interface DraftCollection {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberPhone?: string;
+  accountNumber?: string;
+  planId: string;
+  amount: number;
+  method: 'cash' | 'tsa' | 'tagora_pool';
+}
+
+function toIsoDay(value: Date | string): string {
+  const d = new Date(value);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function statusBadge(status: string) {
   const s = status as CollectionStatus;
   const map: Record<CollectionStatus, string> = {
@@ -31,14 +50,22 @@ export function CollectionsHistoryPage() {
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'cash' | 'tsa' | 'tagora_pool'>('cash');
-  const [recordLoading, setRecordLoading] = useState(false);
+  const [drafts, setDrafts] = useState<DraftCollection[]>([]);
+  const [draftNotice, setDraftNotice] = useState('');
+  const [draftAddCooldown, setDraftAddCooldown] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CollectionStatusFilter>('all');
   const [methodFilter, setMethodFilter] = useState<CollectionMethodFilter>('all');
+  const [dateFilter, setDateFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const draftStorageKey = useMemo(
+    () => (tso ? `tagora:collection-drafts:${tso.tsoId}` : ''),
+    [tso],
+  );
 
   async function loadCollections() {
     setLoading(true);
@@ -62,6 +89,53 @@ export function CollectionsHistoryPage() {
       .then(setAssignments)
       .catch((e: Error) => setError(e.message));
   }, [tso]);
+
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === 'undefined') return;
+
+    const raw = window.localStorage.getItem(draftStorageKey);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        window.localStorage.removeItem(draftStorageKey);
+        return;
+      }
+
+      const restored = parsed.filter((item): item is DraftCollection => {
+        if (!item || typeof item !== 'object') return false;
+        return (
+          typeof item.id === 'string' &&
+          typeof item.memberId === 'string' &&
+          typeof item.memberName === 'string' &&
+          typeof item.planId === 'string' &&
+          typeof item.amount === 'number' &&
+          (item.method === 'cash' || item.method === 'tsa' || item.method === 'tagora_pool')
+        );
+      });
+
+      setDrafts(restored);
+      if (restored.length > 0) {
+        setSubmitSuccess(
+          `Restored ${restored.length} scheduled collection${restored.length === 1 ? '' : 's'} from your last session.`,
+        );
+      }
+    } catch {
+      window.localStorage.removeItem(draftStorageKey);
+    }
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === 'undefined') return;
+
+    if (drafts.length === 0) {
+      window.localStorage.removeItem(draftStorageKey);
+      return;
+    }
+
+    window.localStorage.setItem(draftStorageKey, JSON.stringify(drafts));
+  }, [draftStorageKey, drafts]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredAssignments = useMemo(() => {
@@ -113,6 +187,10 @@ export function CollectionsHistoryPage() {
         return false;
       }
 
+      if (dateFilter && toIsoDay(collection.timestamp) !== dateFilter) {
+        return false;
+      }
+
       if (!normalizedHistorySearch) {
         return true;
       }
@@ -131,7 +209,7 @@ export function CollectionsHistoryPage() {
 
       return searchable.includes(normalizedHistorySearch);
     });
-  }, [historyCollections, memberById, methodFilter, normalizedHistorySearch, statusFilter]);
+  }, [historyCollections, memberById, methodFilter, dateFilter, normalizedHistorySearch, statusFilter]);
 
   const summaryCards = useMemo(() => {
     const todayKey = new Date().toDateString();
@@ -162,11 +240,14 @@ export function CollectionsHistoryPage() {
     setSelectedMemberId('');
     setAmount('');
     setMethod('cash');
+    setDraftNotice('');
+    setDraftAddCooldown(false);
   }
 
   function handleOpenDialog() {
     setSubmitError('');
     setSubmitSuccess('');
+    setDraftNotice('');
     setShowDialog(true);
   }
 
@@ -175,12 +256,17 @@ export function CollectionsHistoryPage() {
     resetDialogFields();
   }
 
-  async function handleRecordCollection() {
+  function handleAddToSchedule() {
+    if (draftAddCooldown) {
+      return;
+    }
+
     setSubmitError('');
     setSubmitSuccess('');
+    setDraftNotice('');
 
     if (!selectedAssignment) {
-      setSubmitError('Select a customer to record collection for.');
+      setSubmitError('Select a customer to add to schedule.');
       return;
     }
     if (!selectedAssignment.activePlan) {
@@ -194,24 +280,76 @@ export function CollectionsHistoryPage() {
       return;
     }
 
-    try {
-      setRecordLoading(true);
-      await createCollection({
-        memberId: selectedAssignment.member.memberId,
-        planId: selectedAssignment.activePlan.planId,
+    const duplicateDraft = drafts.find(
+      (draft) =>
+        draft.memberId === selectedAssignment.member.memberId &&
+        draft.planId === selectedAssignment.activePlan?.planId &&
+        draft.amount === amt &&
+        draft.method === method,
+    );
+    if (duplicateDraft) {
+      setSubmitError('This collection is already in the schedule.');
+      return;
+    }
+
+    setDraftAddCooldown(true);
+    window.setTimeout(() => setDraftAddCooldown(false), 500);
+
+    const { member, activePlan } = selectedAssignment;
+    setDrafts((prev) => [
+      ...prev,
+      {
+        id: `${member.memberId}-${Date.now()}`,
+        memberId: member.memberId,
+        memberName: member.name,
+        memberPhone: member.phone,
+        accountNumber: member.accountNumber,
+        planId: activePlan.planId,
         amount: amt,
         method,
-        idempotencyKey: `${selectedAssignment.member.memberId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      });
+      },
+    ]);
+    setAmount('');
+    setSelectedMemberId('');
+    setDraftNotice(`${member.name} added to schedule.`);
+  }
 
-      setSubmitSuccess('Collection recorded and pending CSM confirmation.');
-      setAmount('');
-      setSelectedMemberId('');
+  function handleRemoveDraft(id: string) {
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  async function handleSubmitSchedule() {
+    if (!drafts.length) {
+      setSubmitError('Add at least one collection to schedule before submitting.');
+      return;
+    }
+
+    setSubmitError('');
+    setSubmitSuccess('');
+
+    try {
+      setSubmitLoading(true);
+
+      for (const draft of drafts) {
+        await createCollection({
+          memberId: draft.memberId,
+          planId: draft.planId,
+          amount: draft.amount,
+          method: draft.method,
+          idempotencyKey: `${draft.memberId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        });
+      }
+
+      const count = drafts.length;
+      setDrafts([]);
+      setSubmitSuccess(
+        `${count} scheduled collection${count === 1 ? '' : 's'} submitted as individual records for CSM review.`,
+      );
       await loadCollections();
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'Failed to record collection.');
+      setSubmitError(e instanceof Error ? e.message : 'Failed to submit scheduled collections.');
     } finally {
-      setRecordLoading(false);
+      setSubmitLoading(false);
     }
   }
 
@@ -274,6 +412,16 @@ export function CollectionsHistoryPage() {
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="collections-date-filter">Date</label>
+            <input
+              id="collections-date-filter"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+            />
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
             <label className="field-label" htmlFor="collections-method-filter">Method</label>
             <select
               id="collections-method-filter"
@@ -288,6 +436,43 @@ export function CollectionsHistoryPage() {
           </div>
         </div>
       </div>
+
+      {drafts.length > 0 && (
+        <div className="card static" style={{ marginBottom: 16 }}>
+          <div className="row" style={{ marginBottom: 10 }}>
+            <div className="card-title" style={{ marginBottom: 0 }}>Scheduled Collections</div>
+            <div className="card-sub">{drafts.length} item{drafts.length === 1 ? '' : 's'}</div>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            {drafts.map((draft) => (
+              <div key={draft.id} className="collection-draft-row">
+                <div>
+                  <div style={{ fontWeight: 600 }}>{draft.memberName}</div>
+                  <div className="card-sub">{draft.memberPhone ?? draft.accountNumber ?? draft.memberId}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--primary)' }}>₦{draft.amount.toLocaleString()}</div>
+                  <button className="btn btn-outline btn-sm" type="button" onClick={() => handleRemoveDraft(draft.id)}>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="form-actions" style={{ marginTop: 12 }}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => void handleSubmitSchedule()}
+              disabled={submitLoading}
+            >
+              {submitLoading ? 'Submitting…' : 'Submit Schedule'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
@@ -414,9 +599,11 @@ export function CollectionsHistoryPage() {
               </div>
             </div>
 
+            {draftNotice && <div className="success-msg" style={{ marginTop: 12 }}>{draftNotice}</div>}
+
             <div className="form-actions" style={{ marginTop: 8 }}>
-              <button className="btn btn-primary" type="button" onClick={() => void handleRecordCollection()} disabled={recordLoading}>
-                {recordLoading ? 'Recording…' : 'Record'}
+              <button className="btn btn-primary" type="button" onClick={handleAddToSchedule} disabled={draftAddCooldown}>
+                {draftAddCooldown ? 'Adding…' : 'Add To Schedule'}
               </button>
               <button className="btn btn-outline" type="button" onClick={handleDone}>Done</button>
             </div>

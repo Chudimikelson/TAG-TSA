@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Collection } from '@tagora/shared';
 import {
-  confirmCollection,
-  confirmCollectionsBulk,
   getCollections,
-  rejectCollection,
-  rejectCollectionsBulk,
 } from '../api/collections.js';
 import { getMembers } from '../api/members.js';
 import { getTsos } from '../api/tsos.js';
-import { Badge } from '../components/Badge.js';
 import pageStyles from './Page.module.css';
 import styles from './CollectionsPage.module.css';
 
@@ -34,6 +29,68 @@ function toIsoDay(value: number): string {
   return `${y}-${m}-${day}`;
 }
 
+function xmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function methodLabel(method: Collection['method']): string {
+  if (method === 'cash') return 'Cash';
+  if (method === 'tsa') return 'Transfer (TSA)';
+  return 'Transfer (Tagora-Pool)';
+}
+
+function toExcelXml(rows: EnrichedCollectionRow[]): string {
+  const headers = [
+    'Collection ID',
+    'Customer Name',
+    'Account Number',
+    'Amount',
+    'Method',
+    'TSO',
+    'Date/Time',
+  ];
+
+  const headerRow = `<Row>${headers
+    .map((header) => `<Cell><Data ss:Type="String">${xmlEscape(header)}</Data></Cell>`)
+    .join('')}</Row>`;
+
+  const dataRows = rows.map((row) => {
+    const cols = [
+      { type: 'String', value: row.collectionId },
+      { type: 'String', value: row.customerName },
+      { type: 'String', value: row.accountNumber },
+      { type: 'Number', value: String(row.amount) },
+      { type: 'String', value: methodLabel(row.method) },
+      { type: 'String', value: row.tsoName },
+      { type: 'String', value: new Date(row.timestamp).toLocaleString('en-NG') },
+    ];
+
+    return `<Row>${cols
+      .map((col) => `<Cell><Data ss:Type="${col.type}">${xmlEscape(col.value)}</Data></Cell>`)
+      .join('')}</Row>`;
+  });
+
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+  <Worksheet ss:Name="Collections">
+    <Table>
+      ${headerRow}
+      ${dataRows.join('')}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+}
+
 export function CollectionsPage() {
   const [rows, setRows] = useState<EnrichedCollectionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,10 +100,8 @@ export function CollectionsPage() {
   const [selectedTsoId, setSelectedTsoId] = useState<'all' | string>('all');
   const [selectedMethod, setSelectedMethod] = useState<'all' | Collection['method']>('all');
   const [selectedDate, setSelectedDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'rejected'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest' | 'tso-asc' | 'tso-desc'>('newest');
   const [page, setPage] = useState(1);
-  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
 
   async function load() {
     setLoading(true);
@@ -111,7 +166,6 @@ export function CollectionsPage() {
       if (selectedTsoId !== 'all' && row.tsoId !== selectedTsoId) return false;
       if (selectedMethod !== 'all' && row.method !== selectedMethod) return false;
       if (selectedDate && toIsoDay(toEpochMs(row.timestamp)) !== selectedDate) return false;
-      if (statusFilter !== 'all' && row.status !== statusFilter) return false;
       if (!q) return true;
 
       const searchable = [
@@ -126,7 +180,7 @@ export function CollectionsPage() {
 
       return searchable.includes(q);
     });
-  }, [rows, searchTerm, selectedTsoId, selectedMethod, selectedDate, statusFilter]);
+  }, [rows, searchTerm, selectedTsoId, selectedMethod, selectedDate]);
 
   const visibleRows = useMemo(() => {
     const next = [...filteredRows];
@@ -155,57 +209,6 @@ export function CollectionsPage() {
     return next;
   }, [filteredRows, sortBy]);
 
-  const summary = useMemo(() => {
-    const methodTotals = {
-      cash: 0,
-      tsa: 0,
-      tagora_pool: 0,
-    };
-
-    const statusTotals = {
-      pending: 0,
-      confirmed: 0,
-      rejected: 0,
-    };
-
-    let totalAmount = 0;
-    let newestTs = 0;
-    let oldestTs = Number.MAX_SAFE_INTEGER;
-    const byTso = new Map<string, { tsoName: string; count: number; amount: number }>();
-
-    for (const row of visibleRows) {
-      totalAmount += Number(row.amount) || 0;
-      methodTotals[row.method] += Number(row.amount) || 0;
-
-      if (row.status === 'pending' || row.status === 'confirmed' || row.status === 'rejected') {
-        statusTotals[row.status] += 1;
-      }
-
-      const ts = toEpochMs(row.timestamp);
-      if (ts > newestTs) newestTs = ts;
-      if (ts < oldestTs) oldestTs = ts;
-
-      const prev = byTso.get(row.tsoId) ?? { tsoName: row.tsoName, count: 0, amount: 0 };
-      prev.count += 1;
-      prev.amount += Number(row.amount) || 0;
-      byTso.set(row.tsoId, prev);
-    }
-
-    const topTsos = Array.from(byTso.values())
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-
-    return {
-      count: visibleRows.length,
-      totalAmount,
-      statusTotals,
-      methodTotals,
-      newestTs,
-      oldestTs: oldestTs === Number.MAX_SAFE_INTEGER ? 0 : oldestTs,
-      topTsos,
-    };
-  }, [visibleRows]);
-
   const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
 
   useEffect(() => {
@@ -215,83 +218,13 @@ export function CollectionsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, selectedTsoId, selectedMethod, selectedDate, statusFilter, sortBy]);
+  }, [searchTerm, selectedTsoId, selectedMethod, selectedDate, sortBy]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return visibleRows.slice(start, start + PAGE_SIZE);
   }, [page, visibleRows]);
 
-  useEffect(() => {
-    const knownIds = new Set(rows.map((row) => row.collectionId));
-    setSelectedCollectionIds((prev) => prev.filter((id) => knownIds.has(id)));
-  }, [rows]);
-
-  const pendingVisibleIds = useMemo(
-    () => visibleRows.filter((row) => row.status === 'pending').map((row) => row.collectionId),
-    [visibleRows],
-  );
-
-  const selectedPendingIds = useMemo(() => {
-    const pendingSet = new Set(pendingVisibleIds);
-    return selectedCollectionIds.filter((id) => pendingSet.has(id));
-  }, [pendingVisibleIds, selectedCollectionIds]);
-
-  const allPendingSelected = useMemo(() => {
-    if (pendingVisibleIds.length === 0) return false;
-    const selectedSet = new Set(selectedCollectionIds);
-    return pendingVisibleIds.every((id) => selectedSet.has(id));
-  }, [pendingVisibleIds, selectedCollectionIds]);
-
-  async function handleConfirm(id: string) {
-    try {
-      await confirmCollection(id);
-      await load();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to confirm collection');
-    }
-  }
-
-  async function handleReject(id: string) {
-    try {
-      await rejectCollection(id);
-      await load();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to reject collection');
-    }
-  }
-
-  async function handleBulkConfirm() {
-    if (selectedPendingIds.length === 0) {
-      alert('Select at least one pending record to confirm.');
-      return;
-    }
-
-    try {
-      const result = await confirmCollectionsBulk(selectedPendingIds);
-      await load();
-      setSelectedCollectionIds([]);
-      alert(`Confirmed ${result.data.processedCount} record${result.data.processedCount === 1 ? '' : 's'}.`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Bulk confirm failed');
-    }
-  }
-
-  async function handleBulkReject() {
-    if (selectedPendingIds.length === 0) {
-      alert('Select at least one pending record to reject.');
-      return;
-    }
-
-    try {
-      const result = await rejectCollectionsBulk(selectedPendingIds);
-      await load();
-      setSelectedCollectionIds([]);
-      alert(`Rejected ${result.data.processedCount} record${result.data.processedCount === 1 ? '' : 's'}.`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Bulk reject failed');
-    }
-  }
 
   async function handleCopyAccount(accountNumber: string, rowId: string) {
     try {
@@ -303,22 +236,23 @@ export function CollectionsPage() {
     }
   }
 
-  function toggleCollectionSelection(collectionId: string) {
-    setSelectedCollectionIds((prev) => (
-      prev.includes(collectionId)
-        ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId]
-    ));
-  }
-
-  function toggleSelectAllPending() {
-    if (allPendingSelected) {
-      const pendingSet = new Set(pendingVisibleIds);
-      setSelectedCollectionIds((prev) => prev.filter((id) => !pendingSet.has(id)));
+  function handleExportExcel() {
+    if (visibleRows.length === 0) {
+      alert('No filtered records to export.');
       return;
     }
 
-    setSelectedCollectionIds((prev) => Array.from(new Set([...prev, ...pendingVisibleIds])));
+    const xml = toExcelXml(visibleRows);
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `collections-filtered-${stamp}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -372,18 +306,6 @@ export function CollectionsPage() {
 
           <select
             className={styles.controlInput}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'confirmed' | 'rejected')}
-            aria-label="Filter by status"
-          >
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-
-          <select
-            className={styles.controlInput}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest' | 'tso-asc' | 'tso-desc')}
             aria-label="Sort records"
@@ -402,34 +324,15 @@ export function CollectionsPage() {
           </div>
 
           <div className={styles.bulkRow}>
-            <label className={styles.bulkSelectLabel}>
-              <input
-                type="checkbox"
-                checked={allPendingSelected}
-                onChange={toggleSelectAllPending}
-                disabled={pendingVisibleIds.length === 0}
-              />
-              Select all pending ({pendingVisibleIds.length})
-            </label>
-
-            <span className={styles.bulkHint}>Selected pending: {selectedPendingIds.length}</span>
+            <span className={styles.bulkHint}>Filtered records: {visibleRows.length}</span>
 
             <button
-              className={pageStyles.btnSuccess}
+              className={pageStyles.btnSmall}
               type="button"
-              onClick={() => void handleBulkConfirm()}
-              disabled={selectedPendingIds.length === 0}
+              onClick={handleExportExcel}
+              disabled={visibleRows.length === 0}
             >
-              Confirm Selected
-            </button>
-
-            <button
-              className={pageStyles.btnDanger}
-              type="button"
-              onClick={() => void handleBulkReject()}
-              disabled={selectedPendingIds.length === 0}
-            >
-              Reject Selected
+              Export Excel
             </button>
           </div>
           </div>
@@ -448,33 +351,16 @@ export function CollectionsPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th className={styles.colSelect}>Select</th>
                   <th>Customer</th>
                   <th className={styles.colAmount}>Amount</th>
                   <th>Method</th>
                   <th>TSO</th>
                   <th>Date/Time</th>
-                  <th>Status</th>
-                  <th className={styles.colActions}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedRows.map((row) => (
                   <tr key={row.collectionId}>
-                    <td>
-                      {row.status === 'pending' ? (
-                        <input
-                          type="checkbox"
-                          className={styles.rowSelectBox}
-                          checked={selectedCollectionIds.includes(row.collectionId)}
-                          onChange={() => toggleCollectionSelection(row.collectionId)}
-                          aria-label={`Select collection for ${row.customerName}`}
-                        />
-                      ) : (
-                        <span className={styles.selectSpacer} aria-hidden="true" />
-                      )}
-                    </td>
-
                     <td>
                       <div className={styles.customerCell}>
                         <p className={styles.customerName}>{row.customerName}</p>
@@ -505,25 +391,6 @@ export function CollectionsPage() {
 
                     <td>
                       <span className={styles.rowSubtle}>{new Date(row.timestamp).toLocaleString('en-NG')}</span>
-                    </td>
-
-                    <td>
-                      <Badge value={row.status} />
-                    </td>
-
-                    <td className={styles.colActions}>
-                      {row.status === 'pending' ? (
-                        <span className={styles.actionRow}>
-                          <button className={pageStyles.btnSuccess} onClick={() => void handleConfirm(row.collectionId)}>
-                            Confirm
-                          </button>
-                          <button className={pageStyles.btnDanger} onClick={() => void handleReject(row.collectionId)}>
-                            Reject
-                          </button>
-                        </span>
-                      ) : (
-                        <span className={styles.rowSubtle}>No actions</span>
-                      )}
                     </td>
                   </tr>
                 ))}
