@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AssignmentsScreen } from '../screens/AssignmentsScreen.js';
+import { ThriftSaverDetailsScreen } from '../screens/ThriftSaverDetailsScreen.js';
 import { RecordCollectionScreen } from '../screens/RecordCollectionScreen.js';
 import { CollectionsHistoryScreen } from '../screens/CollectionsHistoryScreen.js';
 import { WithdrawalsScreen } from '../screens/WithdrawalsScreen.js';
@@ -22,6 +23,11 @@ export function AppStack() {
         name="Assignments"
         component={AssignmentsScreen}
         options={{ title: 'Thrift Savers' }}
+      />
+      <Stack.Screen
+        name="ThriftSaverDetails"
+        component={ThriftSaverDetailsScreen}
+        options={{ title: 'Thrift Saver Details' }}
       />
       <Stack.Screen
         name="RecordCollection"

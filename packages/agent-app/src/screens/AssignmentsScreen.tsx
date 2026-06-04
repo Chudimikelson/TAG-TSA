@@ -47,7 +47,8 @@ export function AssignmentsScreen({ navigation }: Props) {
           <TouchableOpacity
             style={shared.card}
             onPress={() =>
-              navigation.navigate('RecordCollection', {
+              navigation.navigate('ThriftSaverDetails', {
+                memberId: item.member.memberId,
                 member: item.member,
                 plan: item.activePlan ?? undefined,
               })

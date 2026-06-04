@@ -11,7 +11,11 @@ vi.mock('../models/Collection.js', () => ({
 }));
 
 vi.mock('../models/Member.js', () => ({
-  MemberModel: { find: vi.fn() },
+  MemberModel: { find: vi.fn(), distinct: vi.fn() },
+}));
+
+vi.mock('../models/AuditLog.js', () => ({
+  AuditLogModel: { distinct: vi.fn() },
 }));
 
 vi.mock('../models/SavingsPlan.js', () => ({
@@ -22,6 +26,7 @@ import { getTsoAssignments } from '../services/tso.service.js';
 import { TsoModel } from '../models/Tso.js';
 import { CollectionModel } from '../models/Collection.js';
 import { MemberModel } from '../models/Member.js';
+import { AuditLogModel } from '../models/AuditLog.js';
 import { SavingsPlanModel } from '../models/SavingsPlan.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -40,6 +45,8 @@ describe('tso.service > getTsoAssignments', () => {
   it('returns empty array when TSO has no collections', async () => {
     vi.mocked(TsoModel.findOne).mockResolvedValueOnce({ tsoId: 'tso-1' } as never);
     vi.mocked(CollectionModel.distinct).mockResolvedValueOnce([]);
+    vi.mocked(MemberModel.distinct).mockResolvedValueOnce([]);
+    vi.mocked(AuditLogModel.distinct).mockResolvedValueOnce([]);
 
     const result = await getTsoAssignments('tso-1', 'tso-1', 'tso');
     expect(result).toEqual([]);
@@ -48,6 +55,8 @@ describe('tso.service > getTsoAssignments', () => {
   it('returns members with their active plans', async () => {
     vi.mocked(TsoModel.findOne).mockResolvedValueOnce({ tsoId: 'tso-1' } as never);
     vi.mocked(CollectionModel.distinct).mockResolvedValueOnce(['member-1', 'member-2']);
+    vi.mocked(MemberModel.distinct).mockResolvedValueOnce([]);
+    vi.mocked(AuditLogModel.distinct).mockResolvedValueOnce([]);
     vi.mocked(MemberModel.find).mockReturnValueOnce({
       lean: vi.fn().mockResolvedValue([
         { memberId: 'member-1', name: 'Alice' },
@@ -64,13 +73,17 @@ describe('tso.service > getTsoAssignments', () => {
     expect(result).toHaveLength(2);
     expect(result[0].member.memberId).toBe('member-1');
     expect(result[0].activePlans).toHaveLength(1);
+    expect(result[0].activePlan?.planId).toBe('plan-1');
     expect(result[1].member.memberId).toBe('member-2');
     expect(result[1].activePlans).toHaveLength(0);
+    expect(result[1].activePlan).toBeNull();
   });
 
   it('allows admin to view any TSO\'s assignments', async () => {
     vi.mocked(TsoModel.findOne).mockResolvedValueOnce({ tsoId: 'tso-1' } as never);
     vi.mocked(CollectionModel.distinct).mockResolvedValueOnce([]);
+    vi.mocked(MemberModel.distinct).mockResolvedValueOnce([]);
+    vi.mocked(AuditLogModel.distinct).mockResolvedValueOnce([]);
 
     const result = await getTsoAssignments('tso-1', 'admin-1', 'admin');
     expect(result).toEqual([]);

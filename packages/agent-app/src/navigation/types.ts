@@ -7,6 +7,7 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Assignments: undefined;
+  ThriftSaverDetails: { memberId: string; member?: Member; plan?: SavingsPlan };
   RecordCollection: { member: Member; plan?: SavingsPlan };
   CollectionsHistory: undefined;
   Withdrawals: undefined;

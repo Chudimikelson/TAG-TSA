@@ -32,6 +32,7 @@ vi.mock('../services/storage.service.js', () => ({
 
 import { createCollection, getCollection } from '../services/collection.service.js';
 import { CollectionModel } from '../models/Collection.js';
+import { MemberModel } from '../models/Member.js';
 import { uploadReceiptImage } from '../services/storage.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -64,7 +65,8 @@ describe('collection.service', () => {
 
     it('creates a new collection when idempotency key is fresh', async () => {
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(null);
-      const created = { collectionId: 'col-new', ...baseInput, status: 'pending' };
+      vi.mocked(MemberModel.updateOne).mockResolvedValueOnce({ matchedCount: 1 } as never);
+      const created = { collectionId: 'col-new', ...baseInput, status: 'confirmed' };
       vi.mocked(CollectionModel.create).mockResolvedValueOnce(created as never);
 
       const result = await createCollection(baseInput);
@@ -75,6 +77,7 @@ describe('collection.service', () => {
 
     it('uploads receipt and stores URL when file is provided', async () => {
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(null);
+      vi.mocked(MemberModel.updateOne).mockResolvedValueOnce({ matchedCount: 1 } as never);
       vi.mocked(CollectionModel.create).mockResolvedValueOnce({ collectionId: 'col-1', photoReceiptUrl: 'http://localhost:9000/tagora-receipts/receipts/tso-1/abc.jpg' } as never);
 
       const fakeFile = {
@@ -94,6 +97,7 @@ describe('collection.service', () => {
 
     it('skips upload when no file is provided', async () => {
       vi.mocked(CollectionModel.findOne).mockResolvedValueOnce(null);
+      vi.mocked(MemberModel.updateOne).mockResolvedValueOnce({ matchedCount: 1 } as never);
       vi.mocked(CollectionModel.create).mockResolvedValueOnce({ collectionId: 'col-2' } as never);
 
       await createCollection(baseInput);

@@ -1,97 +1,84 @@
 import { useState } from 'react';
 import {
-  View,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Image,
+  View,
   StyleSheet,
   Alert,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { createCollection } from '../api/collections.js';
+import { useAuthStore } from '../store/authStore.js';
+import { getCollectionDrafts, saveCollectionDrafts } from '../store/collectionDraftStore.js';
 import { shared, colors } from '../theme.js';
 import type { AppStackParamList } from '../navigation/types.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RecordCollection'>;
-
 type Method = 'cash' | 'tsa' | 'tagora_pool';
 
 export function RecordCollectionScreen({ route, navigation }: Props) {
   const { member, plan } = route.params;
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const tso = useAuthStore((s) => s.tso);
 
   const [amount, setAmount] = useState(plan ? String(plan.amount) : '');
   const [method, setMethod] = useState<Method>('cash');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraRef, setCameraRef] = useState<CameraView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  async function openCamera() {
-    if (!cameraPermission?.granted) {
-      const result = await requestCameraPermission();
-      if (!result.granted) {
-        Alert.alert('Permission required', 'Camera access is needed to capture receipts.');
-        return;
-      }
-    }
-    setShowCamera(true);
-  }
-
-  async function takePicture() {
-    if (!cameraRef) return;
-    const photo = await cameraRef.takePictureAsync({ quality: 0.7 });
-    if (photo) setPhotoUri(photo.uri);
-    setShowCamera(false);
-  }
-
-  async function handleSubmit() {
+  async function handleAddToSchedule() {
     if (!plan) {
       Alert.alert('No active plan', 'This member has no active savings plan.');
       return;
     }
-    const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) {
-      setError('Enter a valid amount');
+    if (!tso) {
+      setError('Session expired. Please log in again.');
+      return;
+    }
+
+    const parsed = Number(amount);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      setError('Enter a valid whole number amount');
       return;
     }
 
     setError('');
     setBusy(true);
     try {
-      let lat: number | undefined;
-      let lng: number | undefined;
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        lat = loc.coords.latitude;
-        lng = loc.coords.longitude;
+      const drafts = await getCollectionDrafts(tso.tsoId);
+      const duplicate = drafts.find(
+        (draft) =>
+          draft.memberId === member.memberId &&
+          draft.planId === plan.planId &&
+          draft.amount === parsed &&
+          draft.method === method,
+      );
+      if (duplicate) {
+        setError('This collection is already in the schedule.');
+        return;
       }
 
-      await createCollection({
-        planId: plan.planId,
-        memberId: member.memberId,
-        amount: parsed,
-        method,
-        idempotencyKey: `${plan.planId}-${Date.now()}`,
-        lat,
-        lng,
-        photoUri: photoUri ?? undefined,
-      });
+      const next = [
+        ...drafts,
+        {
+          id: `${member.memberId}-${Date.now()}`,
+          memberId: member.memberId,
+          memberName: member.name,
+          memberPhone: member.phone,
+          accountNumber: member.accountNumber,
+          planId: plan.planId,
+          amount: parsed,
+          method,
+        },
+      ];
 
-      Alert.alert('Success', 'Collection recorded.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      await saveCollectionDrafts(tso.tsoId, next);
+
+      Alert.alert('Added', `${member.name} added to schedule.`, [
+        { text: 'Go to Collections', onPress: () => navigation.navigate('CollectionsHistory') },
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to record collection');
+      setError(err instanceof Error ? err.message : 'Failed to add to schedule');
     } finally {
       setBusy(false);
     }
@@ -101,15 +88,17 @@ export function RecordCollectionScreen({ route, navigation }: Props) {
     <ScrollView style={shared.screen} contentContainerStyle={styles.content}>
       <Text style={shared.title}>{member.name}</Text>
       <Text style={shared.muted}>{member.phone}</Text>
-      {plan && (
+      {plan ? (
         <Text style={[shared.muted, styles.planInfo]}>
-          Plan: {plan.name} — target {plan.amount.toLocaleString()} / {plan.frequency}
+          Plan: {plan.name} - target {plan.amount.toLocaleString()} / {plan.frequency}
         </Text>
+      ) : (
+        <Text style={[shared.muted, styles.planInfo]}>No active plan</Text>
       )}
 
       {error ? <Text style={shared.error}>{error}</Text> : null}
 
-      <Text style={[shared.label, styles.mt]}>Amount collected</Text>
+      <Text style={[shared.label, styles.mt]}>Amount</Text>
       <TextInput
         style={shared.input}
         keyboardType="numeric"
@@ -131,49 +120,17 @@ export function RecordCollectionScreen({ route, navigation }: Props) {
             style={[styles.methodBtn, method === m.value && styles.methodBtnActive]}
             onPress={() => setMethod(m.value)}
           >
-            <Text
-              style={[styles.methodText, method === m.value && styles.methodTextActive]}
-            >
-              {m.label}
-            </Text>
+            <Text style={[styles.methodText, method === m.value && styles.methodTextActive]}>{m.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={[shared.label, styles.mt]}>Receipt photo (optional)</Text>
-      {showCamera ? (
-        <View style={styles.cameraContainer}>
-          <CameraView
-            style={styles.camera}
-            ref={(ref) => setCameraRef(ref)}
-            facing="back"
-          />
-          <TouchableOpacity style={styles.captureBtn} onPress={takePicture}>
-            <Text style={shared.btnText}>Capture</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowCamera(false)}>
-            <Text style={[shared.muted, { textAlign: 'center', marginTop: 8 }]}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.preview} />
-          ) : null}
-          <TouchableOpacity style={styles.photoBtn} onPress={openCamera}>
-            <Text style={styles.photoBtnText}>
-              {photoUri ? 'Retake photo' : 'Open camera'}
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
-
       <TouchableOpacity
         style={[shared.btn, styles.mt, busy && shared.btnDisabled]}
-        onPress={handleSubmit}
+        onPress={() => void handleAddToSchedule()}
         disabled={busy}
       >
-        {busy ? <TagoraLoader compact /> : <Text style={shared.btnText}>Record Collection</Text>}
+        <Text style={shared.btnText}>{busy ? 'Adding...' : 'Add To Schedule'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -199,23 +156,4 @@ const styles = StyleSheet.create({
   },
   methodText: { color: colors.muted, fontWeight: '600' },
   methodTextActive: { color: colors.primary },
-  preview: { width: '100%', height: 180, borderRadius: 8, marginBottom: 8 },
-  photoBtn: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  photoBtnText: { color: colors.primary, fontWeight: '600' },
-  cameraContainer: { marginBottom: 12 },
-  camera: { width: '100%', height: 260, borderRadius: 8 },
-  captureBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
 });

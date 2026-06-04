@@ -61,7 +61,7 @@ describe('auth.service', () => {
       ).rejects.toThrow(AppError);
     });
 
-    it('throws 403 when device does not match', async () => {
+    it('allows login even when device does not match (device binding disabled)', async () => {
       // Create a valid passwordHash via the same hashing path
       const crypto = await import('crypto');
       const salt = crypto.randomBytes(16).toString('hex');
@@ -71,12 +71,33 @@ describe('auth.service', () => {
       vi.mocked(TsoModel.findOne).mockResolvedValueOnce({
         tsoId: 'tso-1',
         passwordHash,
+        name: 'Device Flexible',
+        phone: '+2348000000004',
         status: 'active',
         deviceId: 'other-device',
       } as never);
 
+      const result = await loginTso({ phone: '+2348000000004', password: 'secret123', deviceId: 'dev1' });
+      expect(result.token).toBeDefined();
+      expect(result.tso.tsoId).toBe('tso-1');
+    });
+
+    it('throws 403 when TSO account is suspended', async () => {
+      const crypto = await import('crypto');
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.pbkdf2Sync('secret123', salt, 310_000, 32, 'sha256').toString('hex');
+      const passwordHash = `${salt}:${hash}`;
+
+      vi.mocked(TsoModel.findOne).mockResolvedValueOnce({
+        tsoId: 'tso-2',
+        name: 'Suspended TSO',
+        phone: '+2348000000008',
+        passwordHash,
+        status: 'suspended',
+      } as never);
+
       await expect(
-        loginTso({ phone: '+2348000000004', password: 'secret123', deviceId: 'dev1' }),
+        loginTso({ phone: '+2348000000008', password: 'secret123', deviceId: 'dev1' }),
       ).rejects.toThrow(AppError);
     });
 

@@ -21,7 +21,7 @@ vi.mock('../models/AuditLog.js', () => ({
   AuditLogModel: { create: vi.fn().mockResolvedValue({}) },
 }));
 
-import { createWithdrawal, getWithdrawal, reviewWithdrawal } from '../services/withdrawal.service.js';
+import { createWithdrawal, getWithdrawal } from '../services/withdrawal.service.js';
 import { WithdrawalRequestModel } from '../models/WithdrawalRequest.js';
 import { MemberModel } from '../models/Member.js';
 import { SavingsPlanModel } from '../models/SavingsPlan.js';
@@ -58,29 +58,30 @@ describe('withdrawal.service', () => {
       await expect(createWithdrawal(baseInput, 'tso-1')).rejects.toThrow(AppError);
     });
 
-    it('throws 409 when a pending withdrawal already exists for the plan', async () => {
-      vi.mocked(MemberModel.findOne).mockResolvedValueOnce({ memberId: 'member-1', savingsBalance: 50000 } as never);
-      vi.mocked(SavingsPlanModel.findOne).mockResolvedValueOnce({ planId: 'plan-1', status: 'active' } as never);
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce({ withdrawalId: 'w-existing' } as never);
-      await expect(createWithdrawal(baseInput, 'tso-1')).rejects.toThrow(AppError);
-    });
-
     it('throws 409 when withdrawal amount exceeds savings balance', async () => {
       vi.mocked(MemberModel.findOne).mockResolvedValueOnce({ memberId: 'member-1', savingsBalance: 1000 } as never);
       vi.mocked(SavingsPlanModel.findOne).mockResolvedValueOnce({ planId: 'plan-1', status: 'active' } as never);
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce(null);
       await expect(createWithdrawal(baseInput, 'tso-1')).rejects.toThrow(AppError);
     });
 
-    it('creates and returns withdrawal when all guards pass', async () => {
+    it('creates an approved withdrawal and debits member balance when all guards pass', async () => {
       vi.mocked(MemberModel.findOne).mockResolvedValueOnce({ memberId: 'member-1', savingsBalance: 50000 } as never);
       vi.mocked(SavingsPlanModel.findOne).mockResolvedValueOnce({ planId: 'plan-1', status: 'active' } as never);
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce(null);
-      vi.mocked(WithdrawalRequestModel.create).mockResolvedValueOnce({ withdrawalId: 'w-new', status: 'pending' } as never);
+      vi.mocked(WithdrawalRequestModel.create).mockResolvedValueOnce({
+        withdrawalId: 'w-new',
+        status: 'approved',
+        approvedBy: 'tso-1',
+      } as never);
 
       const result = await createWithdrawal(baseInput, 'tso-1');
       expect(WithdrawalRequestModel.create).toHaveBeenCalledOnce();
+      expect(MemberModel.updateOne).toHaveBeenCalledWith(
+        { memberId: 'member-1' },
+        { $inc: { savingsBalance: -10000 } },
+      );
       expect(result.withdrawalId).toBe('w-new');
+      expect(result.status).toBe('approved');
+      expect(result.approvedBy).toBe('tso-1');
     });
   });
 
@@ -120,50 +121,4 @@ describe('withdrawal.service', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // reviewWithdrawal
-  // -------------------------------------------------------------------------
-  describe('reviewWithdrawal', () => {
-    it('throws 404 when withdrawal not found', async () => {
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce(null);
-      await expect(reviewWithdrawal('w-missing', { decision: 'approved' }, 'admin-1')).rejects.toThrow(AppError);
-    });
-
-    it('throws 409 when withdrawal is not pending', async () => {
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce({
-        withdrawalId: 'w-1',
-        status: 'approved',
-        save: vi.fn(),
-      } as never);
-      await expect(reviewWithdrawal('w-1', { decision: 'rejected' }, 'admin-1')).rejects.toThrow(AppError);
-    });
-
-    it('approves a pending withdrawal and sets approvedBy/approvedAt', async () => {
-      const save = vi.fn().mockResolvedValue({});
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce({
-        withdrawalId: 'w-1',
-        status: 'pending',
-        save,
-      } as never);
-
-      const result = await reviewWithdrawal('w-1', { decision: 'approved' }, 'admin-1');
-      expect(result.status).toBe('approved');
-      expect(result.approvedBy).toBe('admin-1');
-      expect(result.approvedAt).toBeInstanceOf(Date);
-      expect(save).toHaveBeenCalledOnce();
-    });
-
-    it('rejects a pending withdrawal', async () => {
-      const save = vi.fn().mockResolvedValue({});
-      vi.mocked(WithdrawalRequestModel.findOne).mockResolvedValueOnce({
-        withdrawalId: 'w-1',
-        status: 'pending',
-        save,
-      } as never);
-
-      const result = await reviewWithdrawal('w-1', { decision: 'rejected' }, 'admin-1');
-      expect(result.status).toBe('rejected');
-      expect(save).toHaveBeenCalledOnce();
-    });
-  });
 });
