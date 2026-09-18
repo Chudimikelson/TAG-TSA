@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout.js';
-import { createCollection, getAssignments, getCollections, type Assignment } from '../api/collections.js';
+import { getAssignments, getCollections, type Assignment } from '../api/collections.js';
 import type { Collection } from '@tagora/shared';
 import { useAuth } from '../context/AuthContext.js';
 
@@ -55,7 +55,6 @@ export function CollectionsHistoryPage() {
   const [drafts, setDrafts] = useState<DraftCollection[]>([]);
   const [draftNotice, setDraftNotice] = useState('');
   const [draftAddCooldown, setDraftAddCooldown] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [historySearch, setHistorySearch] = useState('');
@@ -322,45 +321,6 @@ export function CollectionsHistoryPage() {
     setAmount('');
     setSelectedMemberId('');
     setDraftNotice(`${member.name} added to schedule.`);
-  }
-
-  function handleRemoveDraft(id: string) {
-    setDrafts((prev) => prev.filter((d) => d.id !== id));
-  }
-
-  async function handleSubmitSchedule() {
-    if (!drafts.length) {
-      setSubmitError('Add at least one collection to schedule before submitting.');
-      return;
-    }
-
-    setSubmitError('');
-    setSubmitSuccess('');
-
-    try {
-      setSubmitLoading(true);
-
-      for (const draft of drafts) {
-        await createCollection({
-          memberId: draft.memberId,
-          planId: draft.planId,
-          amount: draft.amount,
-          method: draft.method,
-          idempotencyKey: `${draft.memberId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        });
-      }
-
-      const count = drafts.length;
-      setDrafts([]);
-      setSubmitSuccess(
-        `${count} scheduled collection${count === 1 ? '' : 's'} submitted as individual records for CSM review.`,
-      );
-      await loadCollections();
-    } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'Failed to submit scheduled collections.');
-    } finally {
-      setSubmitLoading(false);
-    }
   }
 
   return (

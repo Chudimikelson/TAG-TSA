@@ -7,12 +7,6 @@ import { useAuth } from '../context/AuthContext.js';
 
 type DisbursementMethod = 'cash' | 'bank_transfer' | 'mobile_money';
 
-const METHODS: { value: DisbursementMethod; label: string }[] = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-];
-
 export function NewWithdrawalPage() {
   const { tso } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +15,7 @@ export function NewWithdrawalPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<DisbursementMethod>('cash');
+  const [method] = useState<DisbursementMethod>('cash');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);

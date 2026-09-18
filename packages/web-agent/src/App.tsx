@@ -11,7 +11,6 @@ import { AddThriftSaverPage } from './pages/AddThriftSaverPage.js';
 import { ThriftSaverDetailsPage } from './pages/ThriftSaverDetailsPage.js';
 import { DailyReportPage } from './pages/DailyReportPage.js';
 import { KycUpdatePage } from './pages/KycUpdatePage.js';
-import { AgentEntryPage } from './pages/AgentEntryPage.js';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
