@@ -15,6 +15,13 @@ interface AddedCollection {
   planId: string;
 }
 
+function normalizeCollectionMethod(method: unknown): CollectionMethod | null {
+  if (method === 'cash' || method === 'transfer' || method === 'direct') return method;
+  if (method === 'tsa') return 'transfer';
+  if (method === 'tagora_pool') return 'direct';
+  return null;
+}
+
 function getDraftStorageKey(tsoId?: string): string {
   return tsoId ? `tagora:collection-drafts:${tsoId}` : '';
 }
@@ -40,8 +47,17 @@ export function RecordCollectionPage() {
     if (!key) return;
     try {
       const stored = JSON.parse(localStorage.getItem(key) ?? '[]') as AddedCollection[];
-      if (Array.isArray(stored) && stored.length > 0) {
-        setAddedCollections(stored);
+      const restored = Array.isArray(stored)
+        ? stored.flatMap((item) => {
+            const method = normalizeCollectionMethod(item.method);
+            if (!method || !item.id || !item.memberId || !item.memberName || !item.planId || !Number.isInteger(item.amount) || item.amount <= 0) {
+              return [];
+            }
+            return [{ ...item, method }];
+          })
+        : [];
+      if (restored.length > 0) {
+        setAddedCollections(restored);
         setShowSummary(true);
       }
     } catch {
