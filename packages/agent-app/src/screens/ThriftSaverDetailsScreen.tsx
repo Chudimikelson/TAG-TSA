@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import type { Member, SavingsPlan } from '@tagora/shared';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getAssignments, getCollections, type Assignment } from '../api/collections.js';
-import { getWithdrawals } from '../api/withdrawals.js';
-import { useAuthStore } from '../store/authStore.js';
-import { shared, colors } from '../theme.js';
-import type { AppStackParamList } from '../navigation/types.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
+import { getAssignments, getCollections, type Assignment } from '../api/collections';
+import { getWithdrawals } from '../api/withdrawals';
+import { useAuthStore } from '../store/authStore';
+import { shared, colors } from '../theme';
+import type { AppStackParamList } from '../navigation/types';
+import { TagoraLoader } from '../components/TagoraLoader';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ThriftSaverDetails'>;
 
@@ -27,8 +27,8 @@ type StatementEntry = {
 };
 
 function methodLabel(value: string): string {
-  if (value === 'tsa') return 'Transfer (TSA)';
-  if (value === 'tagora_pool') return 'Transfer (Tagora-Pool)';
+  if (value === 'transfer') return 'Transfer';
+  if (value === 'direct') return 'Direct';
   if (value === 'bank_transfer') return 'Bank Transfer';
   if (value === 'mobile_money') return 'Mobile Money';
   if (value === 'cash') return 'Cash';

@@ -1,7 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'tso_token';
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE_URL ??
+  process.env.API_BASE_URL ??
+  'https://tagora-api.onrender.com';
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {

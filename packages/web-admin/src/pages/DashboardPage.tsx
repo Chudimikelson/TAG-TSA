@@ -104,8 +104,8 @@ export function DashboardPage() {
 
     const collectionsByMethod = {
       cash: 0,
-      tsa: 0,
-      tagora_pool: 0,
+      transfer: 0,
+      direct: 0,
     };
 
     validCollections.forEach((c) => {
@@ -172,12 +172,12 @@ export function DashboardPage() {
                   <div className={styles.reportValue}>₦{reportData.collectionsByMethod.cash.toLocaleString()}</div>
                 </div>
                 <div className={styles.reportCard}>
-                  <div className={styles.reportLabel}>Transfer (TSA)</div>
-                  <div className={styles.reportValue}>₦{reportData.collectionsByMethod.tsa.toLocaleString()}</div>
+                  <div className={styles.reportLabel}>Transfer</div>
+                  <div className={styles.reportValue}>₦{reportData.collectionsByMethod.transfer.toLocaleString()}</div>
                 </div>
                 <div className={styles.reportCard}>
                   <div className={styles.reportLabel}>Transfer (Pool)</div>
-                  <div className={styles.reportValue}>₦{reportData.collectionsByMethod.tagora_pool.toLocaleString()}</div>
+                  <div className={styles.reportValue}>₦{reportData.collectionsByMethod.direct.toLocaleString()}</div>
                 </div>
               </div>
 

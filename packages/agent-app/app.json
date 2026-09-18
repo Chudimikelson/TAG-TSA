@@ -4,7 +4,7 @@
     "slug": "tagora-agent-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/tagora-preloader.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/tagora-preloader.png",
@@ -16,7 +16,8 @@
       "bundleIdentifier": "com.tagora.agent",
       "infoPlist": {
         "NSCameraUsageDescription": "To capture receipt photos for collections.",
-        "NSLocationWhenInUseUsageDescription": "To record your location when logging a collection."
+        "NSLocationWhenInUseUsageDescription": "To record your location when logging a collection.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -26,18 +27,32 @@
       "package": "com.tagora.agent",
       "permissions": [
         "CAMERA",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
+    "newArchEnabled": false,
     "plugins": [
       [
         "expo-camera",
-        { "cameraPermission": "Allow Tagora TSO to access your camera." }
+        {
+          "cameraPermission": "Allow Tagora TSO to access your camera."
+        }
       ],
       [
         "expo-location",
-        { "locationWhenInUsePermission": "Allow Tagora TSO to use your location." }
+        {
+          "locationWhenInUsePermission": "Allow Tagora TSO to use your location."
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "039f4f5e-841b-4a8f-a86a-44c5e7f90f73"
+      }
+    }
   }
 }

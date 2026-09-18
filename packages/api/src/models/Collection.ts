@@ -25,7 +25,7 @@ const CollectionSchema = new Schema<CollectionDocument>(
     memberId: { type: String, required: true, index: true },
     tsoId: { type: String, required: true, index: true },
     amount: { type: Number, required: true, min: 1 },
-    method: { type: String, enum: ['cash', 'tsa', 'tagora_pool'], required: true },
+    method: { type: String, enum: ['cash', 'transfer', 'direct'], required: true },
     timestamp: { type: Date, required: true },
     photoReceiptUrl: { type: String },
     geo: {

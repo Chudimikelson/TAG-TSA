@@ -4,7 +4,7 @@ export const createCollectionSchema = z.object({
   planId: z.string().min(1).trim(),
   memberId: z.string().min(1).trim(),
   amount: z.coerce.number().int().positive(),
-  method: z.enum(['cash', 'tsa', 'tagora_pool']),
+  method: z.enum(['cash', 'transfer', 'direct']),
   timestamp: z.coerce.date().optional(),
   geo: z
     .object({

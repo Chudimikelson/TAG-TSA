@@ -8,7 +8,7 @@ export type DraftCollection = {
   accountNumber?: string;
   planId: string;
   amount: number;
-  method: 'cash' | 'tsa' | 'tagora_pool';
+  method: 'cash' | 'transfer' | 'direct';
 };
 
 function keyFor(tsoId: string): string {
@@ -31,7 +31,7 @@ export async function getCollectionDrafts(tsoId: string): Promise<DraftCollectio
       typeof item.memberName === 'string' &&
       typeof item.planId === 'string' &&
       typeof item.amount === 'number' &&
-      (item.method === 'cash' || item.method === 'tsa' || item.method === 'tagora_pool')
+      (item.method === 'cash' || item.method === 'transfer' || item.method === 'direct')
     ));
   } catch {
     return [];

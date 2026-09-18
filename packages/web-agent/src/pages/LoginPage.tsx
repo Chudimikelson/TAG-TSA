@@ -27,20 +27,26 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-title">Tagora TSO</div>
+    <div className="auth-page agent-login-page">
+      <div className="auth-card agent-login-card">
+        <div className="agent-login-welcome">Welcome</div>
+        <div className="agent-login-brand" aria-label="Thrift Savings Mobile Application">
+          <span>Thrift</span>
+          <span>Savings</span>
+          <span>Mobile</span>
+          <span>Application</span>
+        </div>
         <div className="auth-subtitle">Sign in to your TSO account</div>
 
         {error && <div className="error-msg">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label className="field-label" htmlFor="phone">Phone number</label>
+            <label className="field-label" htmlFor="phone">User ID</label>
             <input
               id="phone"
               type="tel"
-              placeholder="+234…"
+              placeholder="+2348012345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
@@ -59,10 +65,13 @@ export function LoginPage() {
             />
           </div>
 
-          <button className="btn btn-primary btn-full" type="submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+          <button className="btn btn-primary btn-full agent-login-submit" type="submit" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+        <div className="agent-login-mark" aria-hidden="true">
+          <span /><span /><span /><span />
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 20.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://tagora-api.onrender.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://tagora-api.onrender.com"
+      }
+    },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://tagora-api.onrender.com"
+      }
+    }
+  }
+}

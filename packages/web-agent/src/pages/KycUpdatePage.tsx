@@ -235,7 +235,8 @@ export function KycUpdatePage() {
   }
 
   return (
-    <Layout title="KYC Update">
+    <Layout title="Update KYC" className="kyc-update-shell">
+      <div className="kyc-mobile-title">Update KYC</div>
       {loading && <div className="spinner" aria-label="Loading customers" />}
       {error && <div className="error-msg">{error}</div>}
       {success && <div className="success-msg">{success}</div>}

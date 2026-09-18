@@ -9,13 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useAuthStore } from '../store/authStore.js';
-import { getCollectionDrafts, saveCollectionDrafts } from '../store/collectionDraftStore.js';
-import { shared, colors } from '../theme.js';
-import type { AppStackParamList } from '../navigation/types.js';
+import { useAuthStore } from '../store/authStore';
+import { getCollectionDrafts, saveCollectionDrafts } from '../store/collectionDraftStore';
+import { shared, colors } from '../theme';
+import type { AppStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RecordCollection'>;
-type Method = 'cash' | 'tsa' | 'tagora_pool';
+type Method = 'cash' | 'transfer' | 'direct';
 
 export function RecordCollectionScreen({ route, navigation }: Props) {
   const { member, plan } = route.params;
@@ -112,8 +112,8 @@ export function RecordCollectionScreen({ route, navigation }: Props) {
       <View style={styles.methodRow}>
         {([
           { value: 'cash' as const, label: 'Cash' },
-          { value: 'tsa' as const, label: 'TSA' },
-          { value: 'tagora_pool' as const, label: 'Tagora-Pool' },
+          { value: 'transfer' as const, label: 'Transfer' },
+          { value: 'direct' as const, label: 'Direct' },
         ]).map((m) => (
           <TouchableOpacity
             key={m.value}

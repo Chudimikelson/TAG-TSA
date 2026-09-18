@@ -1,4 +1,4 @@
-import { request, saveToken } from './client.js';
+import { request, saveToken } from './client';
 
 interface LoginResponse {
   success: boolean;

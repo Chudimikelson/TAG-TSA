@@ -9,10 +9,10 @@ import {
 } from 'react-native';
 import type { WithdrawalRequest } from '@tagora/shared';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getWithdrawals } from '../api/withdrawals.js';
-import { shared, colors } from '../theme.js';
-import type { AppStackParamList } from '../navigation/types.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
+import { getWithdrawals } from '../api/withdrawals';
+import { shared, colors } from '../theme';
+import type { AppStackParamList } from '../navigation/types';
+import { TagoraLoader } from '../components/TagoraLoader';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Withdrawals'>;
 

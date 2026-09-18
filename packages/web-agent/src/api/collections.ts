@@ -17,7 +17,7 @@ export interface CreateCollectionPayload {
   planId: string;
   memberId: string;
   amount: number;
-  method: 'cash' | 'tsa' | 'tagora_pool';
+  method: 'cash' | 'transfer' | 'direct';
   idempotencyKey: string;
   lat?: number;
   lng?: number;

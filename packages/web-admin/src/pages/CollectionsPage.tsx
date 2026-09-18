@@ -40,8 +40,8 @@ function xmlEscape(value: string): string {
 
 function methodLabel(method: Collection['method']): string {
   if (method === 'cash') return 'Cash';
-  if (method === 'tsa') return 'Transfer (TSA)';
-  return 'Transfer (Tagora-Pool)';
+  if (method === 'transfer') return 'Transfer';
+  return 'Direct';
 }
 
 function toExcelXml(rows: EnrichedCollectionRow[]): string {
@@ -292,8 +292,8 @@ export function CollectionsPage() {
           >
             <option value="all">All methods</option>
             <option value="cash">Cash</option>
-            <option value="tsa">Transfer (TSA)</option>
-            <option value="tagora_pool">Transfer (Tagora-Pool)</option>
+            <option value="transfer">Transfer</option>
+            <option value="direct">Direct</option>
           </select>
 
           <input

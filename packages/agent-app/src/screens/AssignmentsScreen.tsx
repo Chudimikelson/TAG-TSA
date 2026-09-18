@@ -7,11 +7,11 @@ import {
   StyleSheet,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getAssignments, type Assignment } from '../api/collections.js';
-import { useAuthStore } from '../store/authStore.js';
-import { shared, colors } from '../theme.js';
-import type { AppStackParamList } from '../navigation/types.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
+import { getAssignments, type Assignment } from '../api/collections';
+import { useAuthStore } from '../store/authStore';
+import { shared, colors } from '../theme';
+import type { AppStackParamList } from '../navigation/types';
+import { TagoraLoader } from '../components/TagoraLoader';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Assignments'>;
 

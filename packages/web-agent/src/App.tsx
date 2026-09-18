@@ -11,6 +11,7 @@ import { AddThriftSaverPage } from './pages/AddThriftSaverPage.js';
 import { ThriftSaverDetailsPage } from './pages/ThriftSaverDetailsPage.js';
 import { DailyReportPage } from './pages/DailyReportPage.js';
 import { KycUpdatePage } from './pages/KycUpdatePage.js';
+import { AgentEntryPage } from './pages/AgentEntryPage.js';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -56,6 +57,10 @@ export function App() {
       />
       <Route
         path="/record-collection/:memberId"
+        element={<RequireAuth><RecordCollectionPage /></RequireAuth>}
+      />
+      <Route
+        path="/record-collection"
         element={<RequireAuth><RecordCollectionPage /></RequireAuth>}
       />
       <Route

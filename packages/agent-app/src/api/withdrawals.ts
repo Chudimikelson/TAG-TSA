@@ -1,5 +1,5 @@
 import type { WithdrawalRequest } from '@tagora/shared';
-import { request } from './client.js';
+import { request } from './client';
 
 export interface CreateWithdrawalPayload {
   planId: string;

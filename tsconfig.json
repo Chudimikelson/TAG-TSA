@@ -13,13 +13,18 @@
     "module": "NodeNext"
   },
   "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/api" }
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/api"
+    }
   ],
   "exclude": [
     "node_modules",
     "packages/web-admin",
     "packages/web-customer",
     "packages/agent-app"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

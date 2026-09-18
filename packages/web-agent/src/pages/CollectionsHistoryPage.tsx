@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout.js';
 import { createCollection, getAssignments, getCollections, type Assignment } from '../api/collections.js';
 import type { Collection } from '@tagora/shared';
@@ -7,7 +8,7 @@ import { useAuth } from '../context/AuthContext.js';
 type CollectionStatus = 'pending' | 'confirmed' | 'rejected' | 'matched' | 'flagged' | 'reconciled';
 
 type CollectionStatusFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
-type CollectionMethodFilter = 'all' | 'cash' | 'tsa' | 'tagora_pool';
+type CollectionMethodFilter = 'all' | 'cash' | 'transfer' | 'direct';
 
 interface DraftCollection {
   id: string;
@@ -17,7 +18,7 @@ interface DraftCollection {
   accountNumber?: string;
   planId: string;
   amount: number;
-  method: 'cash' | 'tsa' | 'tagora_pool';
+  method: 'cash' | 'transfer' | 'direct';
 }
 
 function toIsoDay(value: Date | string): string {
@@ -42,6 +43,7 @@ function statusBadge(status: string) {
 }
 
 export function CollectionsHistoryPage() {
+  const navigate = useNavigate();
   const { tso } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -49,7 +51,7 @@ export function CollectionsHistoryPage() {
   const [query, setQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState<'cash' | 'tsa' | 'tagora_pool'>('cash');
+  const [method, setMethod] = useState<'cash' | 'transfer' | 'direct'>('cash');
   const [drafts, setDrafts] = useState<DraftCollection[]>([]);
   const [draftNotice, setDraftNotice] = useState('');
   const [draftAddCooldown, setDraftAddCooldown] = useState(false);
@@ -59,7 +61,9 @@ export function CollectionsHistoryPage() {
   const [historySearch, setHistorySearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CollectionStatusFilter>('all');
   const [methodFilter, setMethodFilter] = useState<CollectionMethodFilter>('all');
-  const [dateFilter, setDateFilter] = useState('');
+  const today = toIsoDay(new Date());
+  const [dateFilter, setDateFilter] = useState(today);
+  const [endDateFilter, setEndDateFilter] = useState(today);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const draftStorageKey = useMemo(
@@ -111,7 +115,7 @@ export function CollectionsHistoryPage() {
           typeof item.memberName === 'string' &&
           typeof item.planId === 'string' &&
           typeof item.amount === 'number' &&
-          (item.method === 'cash' || item.method === 'tsa' || item.method === 'tagora_pool')
+          (item.method === 'cash' || item.method === 'transfer' || item.method === 'direct')
         );
       });
 
@@ -187,7 +191,11 @@ export function CollectionsHistoryPage() {
         return false;
       }
 
-      if (dateFilter && toIsoDay(collection.timestamp) !== dateFilter) {
+      if (dateFilter && toIsoDay(collection.timestamp) < dateFilter) {
+        return false;
+      }
+
+      if (endDateFilter && toIsoDay(collection.timestamp) > endDateFilter) {
         return false;
       }
 
@@ -209,7 +217,7 @@ export function CollectionsHistoryPage() {
 
       return searchable.includes(normalizedHistorySearch);
     });
-  }, [historyCollections, memberById, methodFilter, dateFilter, normalizedHistorySearch, statusFilter]);
+  }, [historyCollections, memberById, methodFilter, dateFilter, endDateFilter, normalizedHistorySearch, statusFilter]);
 
   const summaryCards = useMemo(() => {
     const todayKey = new Date().toDateString();
@@ -234,6 +242,8 @@ export function CollectionsHistoryPage() {
       { label: 'All-time Value', value: `₦${allTimeTotal.toLocaleString()}`, helper: 'Sum of all uploads' },
     ];
   }, [collections]);
+
+  const allTimeTotal = collections.reduce((sum, collection) => sum + (Number(collection.amount) || 0), 0);
 
   function resetDialogFields() {
     setQuery('');
@@ -355,19 +365,33 @@ export function CollectionsHistoryPage() {
 
   return (
     <Layout
-      title="Collections"
+      title="Home"
+      className="agent-home-shell"
       action={(
         <button className="btn btn-primary btn-sm" onClick={handleOpenDialog}>
           Record Collection
         </button>
       )}
       mobileAction={(
-        <button className="mobile-record-btn" onClick={handleOpenDialog}>
+        <button className="mobile-record-btn" onClick={() => navigate('/record-collection')}>
           <span aria-hidden>+</span>
           <span aria-hidden>💵</span>
         </button>
       )}
     >
+      <section className="agent-home-welcome">
+        <h1>Hello, {tso?.name?.split(' ')[0] ?? 'Agent'}!</h1>
+        <div className="agent-balance-card">
+          <span>Savings Balance</span>
+          <strong>₦{allTimeTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong>
+          <small>Total Clients - {assignments.length}</small>
+        </div>
+      </section>
+
+      <section className="agent-history-section">
+        <h2>Collection History</h2>
+      </section>
+
       {submitSuccess && <div className="success-msg">{submitSuccess}</div>}
       {submitError && <div className="error-msg">{submitError}</div>}
 
@@ -430,49 +454,22 @@ export function CollectionsHistoryPage() {
             >
               <option value="all">All methods</option>
               <option value="cash">Cash</option>
-              <option value="tsa">Transfer (TSA)</option>
-              <option value="tagora_pool">Transfer (Tagora-Pool)</option>
+              <option value="transfer">Transfer</option>
+              <option value="direct">Direct</option>
             </select>
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="collections-end-date-filter">End date</label>
+            <input
+              id="collections-end-date-filter"
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+            />
           </div>
         </div>
       </div>
-
-      {drafts.length > 0 && (
-        <div className="card static" style={{ marginBottom: 16 }}>
-          <div className="row" style={{ marginBottom: 10 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>Scheduled Collections</div>
-            <div className="card-sub">{drafts.length} item{drafts.length === 1 ? '' : 's'}</div>
-          </div>
-
-          <div style={{ display: 'grid', gap: 8 }}>
-            {drafts.map((draft) => (
-              <div key={draft.id} className="collection-draft-row">
-                <div>
-                  <div style={{ fontWeight: 600 }}>{draft.memberName}</div>
-                  <div className="card-sub">{draft.memberPhone ?? draft.accountNumber ?? draft.memberId}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontWeight: 700, color: 'var(--primary)' }}>₦{draft.amount.toLocaleString()}</div>
-                  <button className="btn btn-outline btn-sm" type="button" onClick={() => handleRemoveDraft(draft.id)}>
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="form-actions" style={{ marginTop: 12 }}>
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={() => void handleSubmitSchedule()}
-              disabled={submitLoading}
-            >
-              {submitLoading ? 'Submitting…' : 'Submit Schedule'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
@@ -491,12 +488,12 @@ export function CollectionsHistoryPage() {
 
         const methodLabel = c.method === 'cash'
           ? 'Cash'
-          : c.method === 'tsa'
-            ? 'Transfer (TSA)'
-            : 'Transfer (Tagora-Pool)';
+          : c.method === 'transfer'
+            ? 'Transfer'
+            : 'Direct';
 
         return (
-        <div key={c.collectionId} className="card static">
+        <div key={c.collectionId} className="card static agent-history-card">
           <div className="collections-history-header">
             <div>
               <div className="card-title">{member?.name ?? c.memberId}</div>
@@ -512,6 +509,9 @@ export function CollectionsHistoryPage() {
             <div className="card-sub">
               {new Date(c.timestamp).toLocaleDateString()}
             </div>
+            <button type="button" className="agent-history-details" onClick={() => navigate(`/thrift-savers/${c.memberId}`)}>
+              Details
+            </button>
           </div>
 
           <div className="collections-history-meta">
@@ -584,8 +584,8 @@ export function CollectionsHistoryPage() {
               <div className="toggle-group">
                 {([
                   { value: 'cash' as const, label: 'Cash' },
-                  { value: 'tsa' as const, label: 'Transfer (TSA)' },
-                  { value: 'tagora_pool' as const, label: 'Transfer (Tagora-Pool)' },
+                  { value: 'transfer' as const, label: 'Transfer' },
+                  { value: 'direct' as const, label: 'Direct' },
                 ] as const).map((m) => (
                   <button
                     key={m.value}

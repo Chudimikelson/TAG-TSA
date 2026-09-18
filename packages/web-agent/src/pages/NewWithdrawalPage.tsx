@@ -92,71 +92,59 @@ export function NewWithdrawalPage() {
   }
 
   return (
-    <Layout title="New Withdrawal Request">
-      {success && (
-        <div className="success-msg">Request submitted! Redirecting…</div>
-      )}
-      {error && <div className="error-msg">{error}</div>}
-
-      <div style={{ maxWidth: 480 }}>
+    <Layout title="Withdrawal" className="withdrawal-form-shell">
+      <div className="withdrawal-form">
+        <h1>Withdrawal</h1>
+        {success && <div className="success-msg">Request submitted! You can add another withdrawal.</div>}
+        {error && <div className="error-msg">{error}</div>}
         <form onSubmit={handleSubmit}>
-          <div className="field">
-            <div className="search-input-frame">
-              <label className="search-input-legend" htmlFor="accountSearch">Search Customer</label>
-              <input
-                className="modern-search-input"
-                id="accountSearch"
-                type="text"
-                placeholder="Search by customer name"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setSelectedMemberId('');
-                }}
-                required
-              />
-            </div>
+          <div className="withdrawal-form-field">
+            <label htmlFor="accountSearch">Search Customer</label>
+            <input
+              id="accountSearch"
+              type="search"
+              placeholder="Search by customer name"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setSelectedMemberId('');
+                setSuccess(false);
+              }}
+              required
+            />
           </div>
 
-          {assignmentLoading && <div className="card-sub" style={{ marginBottom: 12 }}>Loading thrift savers…</div>}
+          {assignmentLoading && <div className="card-sub">Loading thrift savers…</div>}
 
           {!assignmentLoading && normalizedSearch && filteredAssignments.length === 0 && (
             <div className="error-msg">No thrift saver found for this search.</div>
           )}
 
-          {!assignmentLoading && filteredAssignments.length > 1 && !matchedMember && (
-            <div className="card static" style={{ marginBottom: 12 }}>
-              <div className="section-label" style={{ marginBottom: 8 }}>Select Thrift Saver</div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {filteredAssignments.slice(0, 8).map(({ member }) => (
-                  <button
-                    key={member.memberId}
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    style={{ justifyContent: 'flex-start' }}
-                    onClick={() => setSelectedMemberId(member.memberId)}
-                  >
-                    {member.name} - {member.accountNumber ?? member.memberId}
-                  </button>
-                ))}
-              </div>
+          {!assignmentLoading && filteredAssignments.length > 0 && !selectedMemberId && (
+            <div className="withdrawal-customer-options">
+              {filteredAssignments.slice(0, 8).map(({ member }) => (
+                <button
+                  key={member.memberId}
+                  type="button"
+                  onClick={() => {
+                    setSelectedMemberId(member.memberId);
+                    setSearchTerm(member.name);
+                  }}
+                >
+                  <strong>{member.name}</strong>
+                  <span>{member.accountNumber ?? member.memberId}</span>
+                </button>
+              ))}
             </div>
           )}
 
-          {!assignmentLoading && matchedMember && (
-            <div className="card static" style={{ marginBottom: 12 }}>
-              <div className="card-title" style={{ marginBottom: 4 }}>{matchedMember.name}</div>
-              <div className="card-sub" style={{ marginBottom: 4 }}>
-                Account: {matchedMember.accountNumber}
-              </div>
-              <div className="card-sub">
-                Account Balance: ₦{Number(matchedMember.savingsBalance ?? 0).toLocaleString()}
-              </div>
-            </div>
-          )}
+          <div className="withdrawal-form-field">
+            <label htmlFor="withdrawal-name">Name</label>
+            <input id="withdrawal-name" type="text" value={matchedMember?.name ?? ''} placeholder="Selected customer" readOnly />
+          </div>
 
-          <div className="field">
-            <label className="field-label" htmlFor="amount">Amount (₦)</label>
+          <div className="withdrawal-form-field withdrawal-amount-field">
+            <label htmlFor="amount">Amount</label>
             <input
               id="amount"
               type="number"
@@ -168,37 +156,21 @@ export function NewWithdrawalPage() {
             />
           </div>
 
-          <div className="field">
-            <span className="section-label">Disbursement method</span>
-            <div className="toggle-group">
-              {METHODS.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  className={`toggle-btn ${method === m.value ? 'active' : ''}`}
-                  onClick={() => setMethod(m.value)}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-actions">
+          <div className="withdrawal-form-actions">
             <button
-              className="btn btn-primary"
+              className="btn withdrawal-form-add"
               type="submit"
               disabled={loading || success || assignmentLoading}
             >
-              {loading ? 'Submitting…' : 'Submit Request'}
+              {loading ? 'ADDING...' : 'ADD'}
             </button>
             <button
-              className="btn btn-outline"
+              className="btn withdrawal-form-done"
               type="button"
               onClick={() => navigate('/withdrawals')}
               disabled={loading}
             >
-              Cancel
+              DONE
             </button>
           </div>
         </form>

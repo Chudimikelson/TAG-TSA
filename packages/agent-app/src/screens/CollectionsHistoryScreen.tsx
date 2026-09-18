@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Collection } from '@tagora/shared';
-import { createCollection, getCollections } from '../api/collections.js';
-import { getCollectionDrafts, saveCollectionDrafts, type DraftCollection } from '../store/collectionDraftStore.js';
-import { useAuthStore } from '../store/authStore.js';
-import { shared, colors } from '../theme.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
+import { createCollection, getCollections } from '../api/collections';
+import { getCollectionDrafts, saveCollectionDrafts, type DraftCollection } from '../store/collectionDraftStore';
+import { useAuthStore } from '../store/authStore';
+import { shared, colors } from '../theme';
+import { TagoraLoader } from '../components/TagoraLoader';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: colors.warningLight,
@@ -26,8 +26,8 @@ const STATUS_COLOR: Record<string, string> = {
 
 function methodLabel(method: Collection['method']): string {
   if (method === 'cash') return 'Cash';
-  if (method === 'tsa') return 'Transfer (TSA)';
-  return 'Transfer (Tagora-Pool)';
+  if (method === 'transfer') return 'Transfer';
+  return 'Direct';
 }
 
 export function CollectionsHistoryScreen() {

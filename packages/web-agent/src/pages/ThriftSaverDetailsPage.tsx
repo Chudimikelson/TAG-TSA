@@ -29,8 +29,8 @@ function affectsBalance(entry: StatementEntry): boolean {
 }
 
 function methodLabel(value: string): string {
-  if (value === 'tsa') return 'Transfer (TSA)';
-  if (value === 'tagora_pool') return 'Transfer (Tagora-Pool)';
+  if (value === 'transfer') return 'Transfer';
+  if (value === 'direct') return 'Direct';
   if (value === 'bank_transfer') return 'Bank Transfer';
   if (value === 'mobile_money') return 'Mobile Money';
   return value.replace('_', ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());

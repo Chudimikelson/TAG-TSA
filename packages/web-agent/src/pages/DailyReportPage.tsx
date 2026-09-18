@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.js';
 import { Layout } from '../components/Layout.js';
-import { getCollections } from '../api/collections.js';
+import { getAssignments, getCollections, type Assignment } from '../api/collections.js';
 import { getWithdrawals } from '../api/withdrawals.js';
 import type { Collection } from '@tagora/shared';
 import type { WithdrawalRequest } from '@tagora/shared';
@@ -16,6 +16,7 @@ function toDateInputValue(date: Date): string {
 export function DailyReportPage() {
   const { tso } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,12 +26,14 @@ export function DailyReportPage() {
     try {
       setLoading(true);
       setError('');
-      const [cols, withs] = await Promise.all([
+      const [cols, withs, assigned] = await Promise.all([
         getCollections(),
         getWithdrawals(),
+        tso ? getAssignments(tso.tsoId) : Promise.resolve([]),
       ]);
       setCollections(cols);
       setWithdrawals(withs);
+      setAssignments(assigned);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     } finally {
@@ -40,7 +43,11 @@ export function DailyReportPage() {
 
   useEffect(() => {
     void loadReport();
-  }, []);
+  }, [tso]);
+
+  const memberNameById = useMemo(() => new Map(
+    assignments.map(({ member }) => [member.memberId, member.name]),
+  ), [assignments]);
 
   const reportData = useMemo(() => {
     const selectedDayKey = new Date(`${reportDate}T00:00:00`).toDateString();
@@ -73,8 +80,8 @@ export function DailyReportPage() {
 
     const collectionsByMethod = {
       cash: 0,
-      tsa: 0,
-      tagora_pool: 0,
+      transfer: 0,
+      direct: 0,
     };
 
     validCollections.forEach((c) => {
@@ -98,88 +105,37 @@ export function DailyReportPage() {
   }, [collections, reportDate, withdrawals]);
 
   return (
-    <Layout title="Daily Report">
+    <Layout title="Reports" className="daily-report-shell">
       {loading && <div className="spinner" aria-label="Loading" />}
       {error && <div className="error-msg">{error}</div>}
 
       {!loading && !error && (
         <>
-          <div className="card static daily-report-header-card">
-            <div className="daily-report-header-row">
-              <div>
-                <div className="daily-report-label">TSO</div>
-                <div className="daily-report-agent-name">{tso?.name ?? 'Agent'}</div>
-              </div>
-              <div className="daily-report-date-wrap">
-                <div className="daily-report-label">Report Date</div>
-                <input
-                  className="daily-report-date-input"
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                />
-              </div>
+          <div className="daily-report-mobile">
+            <h1>Summary</h1>
+            <input className="daily-report-date-input" type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} aria-label="Report date" />
+            <div className="daily-report-summary-card">
+              <div><span>Cash</span><strong>₦{reportData.collectionsByMethod.cash.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong></div>
+              <div><span>Transfer</span><strong>₦{reportData.collectionsByMethod.transfer.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong></div>
+              <div><span>Direct</span><strong>₦{reportData.collectionsByMethod.direct.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong></div>
+              <hr />
+              <div><span>Total</span><strong>₦{reportData.totalCollections.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong></div>
             </div>
-          </div>
-
-          <div className="daily-report-section">
-            <h3 className="daily-report-section-title">Collections</h3>
-
-            <div className="daily-report-method-grid">
-              <div className="card static">
-                <div className="daily-report-label">Cash</div>
-                <div className="daily-report-value">₦{reportData.collectionsByMethod.cash.toLocaleString()}</div>
-              </div>
-
-              <div className="card static">
-                <div className="daily-report-label">Transfer (TSA)</div>
-                <div className="daily-report-value">₦{reportData.collectionsByMethod.tsa.toLocaleString()}</div>
-              </div>
-
-              <div className="card static">
-                <div className="daily-report-label">Transfer (Pool)</div>
-                <div className="daily-report-value">₦{reportData.collectionsByMethod.tagora_pool.toLocaleString()}</div>
-              </div>
-            </div>
-
-            <div
-              className="card static"
-              style={{ marginTop: 12, background: 'var(--primary-light)', borderLeft: '4px solid var(--primary)' }}
-            >
-              <div className="daily-report-label">Total Collections</div>
-              <div className="daily-report-total-positive">₦{reportData.totalCollections.toLocaleString()}</div>
-              <div className="daily-report-caption">
-                {reportData.validCollections.length} valid transaction{reportData.validCollections.length !== 1 ? 's' : ''}
-              </div>
-            </div>
-          </div>
-
-          <div className="daily-report-section">
-            <h3 className="daily-report-section-title">Withdrawals</h3>
-
-            <div
-              className="card static"
-              style={{ background: '#fef3f2', borderLeft: '4px solid #d32f2f' }}
-            >
-              <div className="daily-report-label">Total Withdrawals</div>
-              <div className="daily-report-total-negative">₦{reportData.withdrawalTotals.effective.toLocaleString()}</div>
-              <div className="daily-report-caption">
-                Total requested: ₦{reportData.withdrawalTotals.requested.toLocaleString()} • Pending: ₦{reportData.withdrawalTotals.pending.toLocaleString()} • Rejected: ₦{reportData.withdrawalTotals.rejected.toLocaleString()}
-              </div>
-            </div>
-          </div>
-
-          <div className="daily-report-section">
-            <h3 className="daily-report-section-title">Closing Balance</h3>
-
-            <div
-              className="card static"
-              style={{ background: reportData.netAmount >= 0 ? '#f0f7ff' : '#fef3f2', borderLeft: `4px solid ${reportData.netAmount >= 0 ? 'var(--primary)' : '#d32f2f'}` }}
-            >
-              <div className="daily-report-label">Net Amount (Collections - Effective Withdrawals)</div>
-              <div className={`daily-report-net ${reportData.netAmount >= 0 ? 'is-positive' : 'is-negative'}`}>
-                ₦{reportData.netAmount.toLocaleString()}
-              </div>
+            <h2>Collection Details</h2>
+            <div className="daily-report-collection-list">
+              {reportData.validCollections.map((collection) => (
+                <div className="daily-report-collection-row" key={collection.collectionId}>
+                  <div>
+                    <span>{memberNameById.get(collection.memberId) ?? collection.memberId}</span>
+                    <strong>₦{Number(collection.amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                  <div className="daily-report-row-meta">
+                    <span>{new Date(collection.timestamp).toLocaleDateString()}</span>
+                    <b>{collection.method === 'cash' ? 'Cash' : collection.method === 'transfer' ? 'Transfer' : 'Direct'}</b>
+                  </div>
+                </div>
+              ))}
+              {reportData.validCollections.length === 0 && <div className="empty-state">No collections for this date.</div>}
             </div>
           </div>
         </>

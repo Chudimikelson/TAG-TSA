@@ -88,34 +88,32 @@ export function AddThriftSaverPage() {
   }
 
   return (
-    <Layout title="Add Thrift Saver">
-      {success && (
-        <div className="success-msg">
-          Thrift saver registered successfully! Redirecting…
-        </div>
-      )}
-      {error && <div className="error-msg">{error}</div>}
-      {errorDetails.length > 0 && (
-        <div className="error-msg">
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {errorDetails.map((detail) => (
-              <li key={detail}>{detail}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <Layout title="Create New Account" className="add-saver-shell">
+      <div className="add-saver-form-wrap">
+        <h1>Create New<br />Account</h1>
+        {success && (
+          <div className="success-msg">
+            Thrift saver registered successfully! Redirecting…
+          </div>
+        )}
+        {error && <div className="error-msg">{error}</div>}
+        {errorDetails.length > 0 && (
+          <div className="error-msg">
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {errorDetails.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} style={{ maxWidth: 720 }}>
+      <form onSubmit={handleSubmit} className="add-saver-form">
         {/* ── Member details ── */}
-        <p className="section-label" style={{ marginBottom: 12, fontSize: 14, color: 'var(--primary)', fontWeight: 700 }}>
+        <p className="section-label add-saver-section-title">
           Personal Details
         </p>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '0 20px',
-        }}>
+        <div className="add-saver-fields">
 
         <div className="field">
           <label className="field-label" htmlFor="name">Full name</label>
@@ -189,15 +187,11 @@ export function AddThriftSaverPage() {
         </div>{/* end grid */}
 
         {/* ── Savings plan ── */}
-        <p className="section-label" style={{ margin: '20px 0 12px', fontSize: 14, color: 'var(--primary)', fontWeight: 700 }}>
+        <p className="section-label add-saver-section-title">
           Savings Plan
         </p>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '0 20px',
-        }}>
+        <div className="add-saver-fields">
 
         <div className="field">
           <label className="field-label" htmlFor="planName">Plan name</label>
@@ -257,13 +251,13 @@ export function AddThriftSaverPage() {
           />
         </div>
 
-        <div className="form-actions">
+        <div className="form-actions add-saver-actions">
           <button
             className="btn btn-primary"
             type="submit"
             disabled={loading || success}
           >
-            {loading ? 'Registering…' : 'Register Thrift Saver'}
+            {loading ? 'Creating…' : 'Create'}
           </button>
           <button
             className="btn btn-outline"
@@ -275,6 +269,7 @@ export function AddThriftSaverPage() {
           </button>
         </div>
       </form>
+      </div>
     </Layout>
   );
 }

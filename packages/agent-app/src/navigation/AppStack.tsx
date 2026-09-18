@@ -1,12 +1,12 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AssignmentsScreen } from '../screens/AssignmentsScreen.js';
-import { ThriftSaverDetailsScreen } from '../screens/ThriftSaverDetailsScreen.js';
-import { RecordCollectionScreen } from '../screens/RecordCollectionScreen.js';
-import { CollectionsHistoryScreen } from '../screens/CollectionsHistoryScreen.js';
-import { WithdrawalsScreen } from '../screens/WithdrawalsScreen.js';
-import { NewWithdrawalScreen } from '../screens/NewWithdrawalScreen.js';
-import { colors } from '../theme.js';
-import type { AppStackParamList } from './types.js';
+import { AssignmentsScreen } from '../screens/AssignmentsScreen';
+import { ThriftSaverDetailsScreen } from '../screens/ThriftSaverDetailsScreen';
+import { RecordCollectionScreen } from '../screens/RecordCollectionScreen';
+import { CollectionsHistoryScreen } from '../screens/CollectionsHistoryScreen';
+import { WithdrawalsScreen } from '../screens/WithdrawalsScreen';
+import { NewWithdrawalScreen } from '../screens/NewWithdrawalScreen';
+import { colors } from '../theme';
+import type { AppStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 

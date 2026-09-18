@@ -6,6 +6,7 @@ interface LayoutProps {
   title: string;
   action?: ReactNode;
   mobileAction?: ReactNode;
+  className?: string;
   children: ReactNode;
 }
 
@@ -16,14 +17,15 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Collections', icon: '💵' },
-  { to: '/thrift-savers', label: 'Thrift Savers', icon: '👥' },
-  { to: '/daily-report', label: 'Daily Report', icon: '📊' },
-  { to: '/kyc-update', label: 'KYC Update', icon: '🪪' },
-  { to: '/withdrawals', label: 'Withdrawals', icon: '💳' },
+  { to: '/', label: 'Dashboard', icon: '▦' },
+  { to: '/record-collection', label: 'Collection', icon: '＋' },
+  { to: '/withdrawals/new', label: 'Withdrawal', icon: '↗' },
+  { to: '/thrift-savers/add', label: 'New Account', icon: '＋' },
+  { to: '/kyc-update', label: 'Update KYC', icon: '✓' },
+  { to: '/daily-report', label: 'Reports', icon: '▤' },
 ];
 
-export function Layout({ title, action, mobileAction, children }: LayoutProps) {
+export function Layout({ title, action, mobileAction, className, children }: LayoutProps) {
   const { tso, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,7 +43,7 @@ export function Layout({ title, action, mobileAction, children }: LayoutProps) {
   }
 
   return (
-    <div className={`app-shell ${navOpen ? 'mobile-nav-open' : ''} ${userMenuOpen ? 'mobile-user-open' : ''}`}>
+    <div className={`app-shell ${className ?? ''} ${navOpen ? 'mobile-nav-open' : ''} ${userMenuOpen ? 'mobile-user-open' : ''}`}>
       <div className="mobile-topbar">
         <button
           type="button"
@@ -138,7 +140,20 @@ export function Layout({ title, action, mobileAction, children }: LayoutProps) {
             </NavLink>
           ))}
         </div>
+        <button type="button" className="mobile-menu-signout" onClick={handleLogout}>
+          Sign Out
+        </button>
       </div>
+
+      <button
+        type="button"
+        className="agent-mobile-bottom-nav"
+        onClick={() => setNavOpen((prev) => !prev)}
+        aria-label={navOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={navOpen}
+      >
+        <img src="/menu-icon.svg" alt="" aria-hidden="true" />
+      </button>
 
       <div className="main-content">
         <div className="page-header">

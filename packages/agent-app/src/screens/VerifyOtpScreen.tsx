@@ -7,11 +7,11 @@ import {
   StyleSheet,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { verifyOtp } from '../api/auth.js';
-import { useAuthStore } from '../store/authStore.js';
-import { shared, colors } from '../theme.js';
-import type { AuthStackParamList } from '../navigation/types.js';
-import { TagoraLoader } from '../components/TagoraLoader.js';
+import { verifyOtp } from '../api/auth';
+import { useAuthStore } from '../store/authStore';
+import { shared, colors } from '../theme';
+import type { AuthStackParamList } from '../navigation/types';
+import { TagoraLoader } from '../components/TagoraLoader';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'VerifyOtp'>;
 
