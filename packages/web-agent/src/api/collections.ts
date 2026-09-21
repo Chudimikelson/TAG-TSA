@@ -26,8 +26,8 @@ export interface CreateCollectionPayload {
 
 function normalizeCollectionMethod(method: string): 'cash' | 'transfer' | 'direct' {
   if (method === 'transfer' || method === 'direct' || method === 'cash') return method;
-  if (method === 'tsa') return 'transfer';
-  if (method === 'tagora_pool') return 'direct';
+  if (method === 'tsa') return 'direct';
+  if (method === 'tsa_pool' || method === 'tagora_pool') return 'transfer';
   return 'cash';
 }
 

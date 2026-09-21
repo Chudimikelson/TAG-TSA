@@ -1,10 +1,16 @@
 import { z } from 'zod';
 
+const collectionMethodSchema = z.preprocess((value) => {
+  if (value === 'tsa') return 'direct';
+  if (value === 'tsa_pool' || value === 'tagora_pool') return 'transfer';
+  return value;
+}, z.enum(['cash', 'transfer', 'direct']));
+
 export const createCollectionSchema = z.object({
   planId: z.string().min(1).trim(),
   memberId: z.string().min(1).trim(),
   amount: z.coerce.number().int().positive(),
-  method: z.enum(['cash', 'transfer', 'direct']),
+  method: collectionMethodSchema,
   timestamp: z.coerce.date().optional(),
   geo: z
     .object({

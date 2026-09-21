@@ -17,8 +17,8 @@ interface AddedCollection {
 
 function normalizeCollectionMethod(method: unknown): CollectionMethod | null {
   if (method === 'cash' || method === 'transfer' || method === 'direct') return method;
-  if (method === 'tsa') return 'transfer';
-  if (method === 'tagora_pool') return 'direct';
+  if (method === 'tsa') return 'direct';
+  if (method === 'tsa_pool' || method === 'tagora_pool') return 'transfer';
   return null;
 }
 
