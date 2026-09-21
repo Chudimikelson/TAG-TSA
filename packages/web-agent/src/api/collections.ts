@@ -24,10 +24,22 @@ export interface CreateCollectionPayload {
   photoFile?: File;
 }
 
+function normalizeCollectionMethod(method: string): 'cash' | 'transfer' | 'direct' {
+  if (method === 'transfer' || method === 'direct' || method === 'cash') return method;
+  if (method === 'tsa') return 'transfer';
+  if (method === 'tagora_pool') return 'direct';
+  return 'cash';
+}
+
 export async function createCollection(
   payload: CreateCollectionPayload,
 ): Promise<void> {
-  const { photoFile, lat, lng, ...rest } = payload;
+  const normalizedPayload = {
+    ...payload,
+    method: normalizeCollectionMethod(String(payload.method ?? 'cash')),
+  } as CreateCollectionPayload;
+
+  const { photoFile, lat, lng, ...rest } = normalizedPayload;
   if (photoFile) {
     const form = new FormData();
     Object.entries(rest).forEach(([k, v]) => form.append(k, String(v)));
