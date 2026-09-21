@@ -25,6 +25,5 @@
     "packages/web-admin",
     "packages/web-customer",
     "packages/agent-app"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }
