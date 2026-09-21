@@ -4,7 +4,7 @@ services:
     env: node
     rootDir: .
     buildCommand: npm install && npm run build --workspace @tagora/shared && npm run build --workspace @tagora/api
-    startCommand: npm run start --workspace @tagora/api
+    startCommand: cd packages/api && node dist/server.js
     autoDeploy: true
     envVars:
       - key: NODE_ENV
